@@ -1,8 +1,10 @@
 # Outlook Clone
 Clone of the Microsoft Outlook mobile UI in .NET MAUI
     
-This repo has the code for a blog post I wrote for [.NET MAUI UI July](https://goforgoldman.com/2022/05/19/maui-ui-july.html).
+This repo has the code for a blog post written by Matt Goldman for [.NET MAUI UI July](https://goforgoldman.com/posts/outlook-clone).
     
-You can read the blog post here: https://goforgoldman.com/2022/06/30/outlook-clone.html
+You can read the blog post here: https://goforgoldman.com/posts/outlook-clone
+
+None of the functionality has been built, yet it's just a UI for now.
 
 ![outlook preview](https://github.com/matt-goldman/outlook/raw/main/assets/OutlookClone.gif)
