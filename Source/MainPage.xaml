@@ -1,0 +1,262 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Zuemail.MainPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:uc="clr-namespace:Zuemail.Controls"
+    xmlns:vm="clr-namespace:Zuemail.ViewModels"
+    d:DesignHeight="500"
+    d:DesignWidth="200"
+    mc:Ignorable="d">
+    <!--<ContentPage.BindingContext>
+        <vm:FolderMonitorViewModel />
+    </ContentPage.BindingContext>-->
+
+    <Grid RowDefinitions="50,40,*,80">
+        <FlexLayout
+            Grid.Row="0"
+            BackgroundColor="{StaticResource Primary}"
+            HorizontalOptions="FillAndExpand"
+            JustifyContent="SpaceBetween"
+            VerticalOptions="FillAndExpand">
+            <HorizontalStackLayout Margin="5,0,0,0" Spacing="10">
+                <Label
+                    BackgroundColor="White"
+                    FontFamily="FluentFilled"
+                    FontSize="Large"
+                    HeightRequest="30"
+                    HorizontalOptions="StartAndExpand"
+                    HorizontalTextAlignment="Center"
+                    Text="&#xfa38;"
+                    TextColor="{StaticResource Primary}"
+                    VerticalOptions="Center"
+                    VerticalTextAlignment="Center"
+                    WidthRequest="30">
+                    <Label.Clip>
+                        <EllipseGeometry
+                            Center="15,15"
+                            RadiusX="15"
+                            RadiusY="15" />
+                    </Label.Clip>
+                </Label>
+                <Label
+                    FontAttributes="Bold"
+                    FontSize="Large"
+                    HorizontalOptions="StartAndExpand"
+                    Text="Inbox"
+                    TextColor="White"
+                    VerticalTextAlignment="Center" />
+            </HorizontalStackLayout>
+            <Label
+                Margin="0,0,5,0"
+                FontFamily="FluentRegular"
+                FontSize="Large"
+                HorizontalOptions="EndAndExpand"
+                HorizontalTextAlignment="End"
+                Text="&#xfb26;"
+                TextColor="White"
+                VerticalOptions="Center"
+                WidthRequest="40" />
+        </FlexLayout>
+
+        <FlexLayout
+            Grid.Row="1"
+            Padding="20,5"
+            AlignContent="Center"
+            BackgroundColor="{StaticResource Primary}"
+            HorizontalOptions="FillAndExpand"
+            JustifyContent="SpaceBetween"
+            VerticalOptions="FillAndExpand">
+            <uc:CustomSwitch Margin="0,0,0,5" VerticalOptions="Center" />
+
+            <HorizontalStackLayout Margin="0,0,5,0" Spacing="10">
+                <Label
+                    FontFamily="FluentRegular"
+                    FontSize="Large"
+                    HorizontalOptions="EndAndExpand"
+                    HorizontalTextAlignment="End"
+                    Text="&#xf408;"
+                    TextColor="White"
+                    VerticalOptions="Center"
+                    WidthRequest="40" />
+                <Label
+                    HorizontalOptions="EndAndExpand"
+                    HorizontalTextAlignment="End"
+                    Text="Filter"
+                    TextColor="White"
+                    VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </FlexLayout>
+
+        <CollectionView
+            x:Name="MessageCollection"
+            Grid.Row="2"
+            HorizontalOptions="Fill"
+            VerticalOptions="Fill">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid
+                        Padding="10,5,20,5"
+                        ColumnDefinitions="50,*,50"
+                        HorizontalOptions="Fill"
+                        RowDefinitions="25,20,40"
+                        VerticalOptions="Fill">
+                        <!--<Image
+                            Grid.RowSpan="3"
+                            Aspect="AspectFill"
+                            HeightRequest="40"
+                            HorizontalOptions="Start"
+                            Source="{Binding image}"
+                            VerticalOptions="Start"
+                            WidthRequest="40">
+                            <Image.Clip>
+                                <EllipseGeometry
+                                    Center="20,20"
+                                    RadiusX="20"
+                                    RadiusY="20" />
+                            </Image.Clip>
+                        </Image>-->
+                        <Label
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            FontAttributes="Bold"
+                            FontSize="18"
+                            Text="{Binding From}"
+                            TextColor="Black" />
+
+                        <Label
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            LineBreakMode="TailTruncation"
+                            Text="{Binding Subject}"
+                            TextColor="Black"
+                            VerticalOptions="Start" />
+
+                        <Label
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            Grid.ColumnSpan="2"
+                            LineBreakMode="WordWrap"
+                            Text="{Binding BodyPreview}"
+                            TextColor="{StaticResource Tertiary}"
+                            VerticalOptions="Start" />
+
+                        <Label
+                            Grid.Row="0"
+                            Grid.Column="2"
+                            FontSize="12"
+                            Text="Saturday"
+                            TextColor="{StaticResource Tertiary}" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button
+            Grid.Row="2"
+            Margin="20"
+            BackgroundColor="{StaticResource Primary}"
+            CornerRadius="30"
+            FontSize="30"
+            HeightRequest="60"
+            HorizontalOptions="EndAndExpand"
+            Text="+"
+            VerticalOptions="EndAndExpand"
+            WidthRequest="60">
+            <Button.Shadow>
+                <Shadow
+                    Brush="Black"
+                    Opacity="0.5"
+                    Radius="10"
+                    Offset="5,5" />
+            </Button.Shadow>
+        </Button>
+
+        <Grid
+            Grid.Row="3"
+            Padding="5"
+            BackgroundColor="{StaticResource Secondary}"
+            ColumnDefinitions="*,*,*"
+            HorizontalOptions="FillAndExpand"
+            VerticalOptions="FillAndExpand">
+            <VerticalStackLayout HorizontalOptions="Center">
+                <Label
+                    FontFamily="FluentFilled"
+                    FontSize="30"
+                    HeightRequest="30"
+                    HorizontalOptions="Center"
+                    HorizontalTextAlignment="Center"
+                    Text="&#xf513;"
+                    TextColor="{StaticResource Primary}"
+                    VerticalOptions="Center"
+                    VerticalTextAlignment="Center"
+                    WidthRequest="30" />
+                <Label
+                    FontSize="11"
+                    HorizontalOptions="Center"
+                    HorizontalTextAlignment="Center"
+                    Text="Email"
+                    TextColor="{StaticResource Primary}"
+                    VerticalOptions="Center"
+                    VerticalTextAlignment="Center" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center">
+                <Label
+                    FontFamily="FluentRegular"
+                    FontSize="30"
+                    HeightRequest="30"
+                    HorizontalOptions="Center"
+                    HorizontalTextAlignment="Center"
+                    Text="&#xfb26;"
+                    TextColor="{StaticResource Tertiary}"
+                    VerticalOptions="Center"
+                    VerticalTextAlignment="Center"
+                    WidthRequest="30" />
+                <Label
+                    FontSize="11"
+                    HorizontalOptions="Center"
+                    HorizontalTextAlignment="Center"
+                    Text="Search"
+                    TextColor="{StaticResource Tertiary}"
+                    VerticalOptions="Center"
+                    VerticalTextAlignment="Center" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center">
+                <Label
+                    FontFamily="FluentRegular"
+                    FontSize="30"
+                    HeightRequest="30"
+                    HorizontalOptions="Center"
+                    HorizontalTextAlignment="Center"
+                    Text="&#x03de;"
+                    TextColor="{StaticResource Tertiary}"
+                    VerticalOptions="Center"
+                    VerticalTextAlignment="Center"
+                    WidthRequest="30" />
+                <Label
+                    FontSize="11"
+                    HorizontalOptions="Center"
+                    HorizontalTextAlignment="Center"
+                    Text="Calendar"
+                    TextColor="{StaticResource Tertiary}"
+                    VerticalOptions="Center"
+                    VerticalTextAlignment="Center" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <ActivityIndicator
+            x:Name="LoadingIndicator"
+            Grid.Row="2"
+            HorizontalOptions="Center"
+            IsEnabled="True"
+            IsRunning="True"
+            IsVisible="{Binding IsInProgress}"
+            VerticalOptions="Center"
+            Color="{StaticResource Primary}" />
+
+    </Grid>
+</ContentPage>

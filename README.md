@@ -1,10 +1,6 @@
-# Outlook Clone
-Clone of the Microsoft Outlook mobile UI in .NET MAUI
-    
-This repo has the code for a blog post written by Matt Goldman for [.NET MAUI UI July](https://goforgoldman.com/posts/outlook-clone).
-    
-You can read the blog post here: https://goforgoldman.com/posts/outlook-clone
+# .NET MAUI Email App
+Email App based on the Microsoft Outlook mobile UI but written in .NET MAUI.
 
-None of the functionality has been built, yet it's just a UI for now.
+This project is a working fork from a blog post written by Matt Goldman for [.NET MAUI UI July](https://goforgoldman.com/posts/outlook-clone), but internally it is using the excellent [MailKitSimplified](https://github.com/danzuep/MailKitSimplified) library.
 
-![outlook preview](https://github.com/matt-goldman/outlook/raw/main/assets/OutlookClone.gif)
+![Application preview](https://github.com/danzuep/Zuemail/Assets/Preview.gif)
