@@ -10,23 +10,26 @@ namespace Zuemail.Extensions
         public static Models.Email Convert(this MimeMessage mimeMessage)
         {
             Guard.IsNotNull(mimeMessage, nameof(mimeMessage));
-            var email = new Models.Email();
-            email.MessageId = mimeMessage.MessageId;
-            email.Date = mimeMessage.Date.ToString();
-            email.From = mimeMessage.From.ToString();
-            email.To = mimeMessage.To.ToString();
-            email.Cc = mimeMessage.Cc.ToString();
-            email.Bcc = mimeMessage.Bcc.ToString();
-            email.Headers = mimeMessage.Headers.ToEnumeratedString();
-            email.Attachments = mimeMessage.Attachments?.Count().ToString() ?? "0";
-            email.Subject = mimeMessage.Subject ?? string.Empty;
-            email.BodyText = mimeMessage.TextBody?.Trim() ??
-                mimeMessage.HtmlBody?.DecodeHtml() ?? string.Empty;
+            var email = new Models.Email
+            {
+                MessageId = mimeMessage.MessageId,
+                Date = mimeMessage.Date.ToString("R"),
+                From = mimeMessage.From.ToString(),
+                To = mimeMessage.To.ToString(),
+                Cc = mimeMessage.Cc.ToString(),
+                Bcc = mimeMessage.Bcc.ToString(),
+                Headers = mimeMessage.Headers.ToEnumeratedString(),
+                AttachmentCount = mimeMessage.Attachments?.Count() ?? 0,
+                AttachmentNames = mimeMessage.Attachments.GetAttachmentNames(),
+                Subject = mimeMessage.Subject ?? string.Empty,
+                BodyText = mimeMessage.TextBody?.Trim() ??
+                    mimeMessage.HtmlBody?.DecodeHtml() ?? string.Empty
+            };
             email.BodyHtml = mimeMessage.HtmlBody?.Trim() ?? email.BodyText;
             return email;
         }
 
-        public static IEnumerable<Models.Email> Convert<TIn>(this IEnumerable<TIn>? values) where TIn : MimeMessage =>
+        public static IEnumerable<Models.Email> Convert<TIn>(this IEnumerable<TIn>? values) where TIn : MimeMessage => /*where TOut : Models.Email*/
             values?.Select(c => c?.Convert()!).Where(c => c != null) ?? Array.Empty<Models.Email>();
     }
 }

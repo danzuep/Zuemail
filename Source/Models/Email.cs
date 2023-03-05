@@ -30,9 +30,9 @@ public class Email
 
     public string Headers { get; set; } = string.Empty;
 
-    public string Attachments { get; set; } = string.Empty;
+    public int AttachmentCount { get; set; }
 
-    public List<EmailAttachment> EmailAttachments { get; set; } = new();
+    public IEnumerable<string> AttachmentNames { get; set; } = new List<string>();
 
     public string Subject { get; set; } = string.Empty;
 
@@ -50,7 +50,7 @@ public class Email
                 if (string.IsNullOrWhiteSpace(BodyText))
                     BodyText = _bodyPreview;
                 if (_bodyPreview.Length > PreviewLength)
-                    _bodyPreview = $"{_bodyPreview.Substring(0, PreviewLength)} ...";
+                    _bodyPreview = $"{_bodyPreview[..PreviewLength]} ...";
             }
             return _bodyPreview;
         }
@@ -84,8 +84,8 @@ public class Email
             if (!string.IsNullOrEmpty(Bcc))
                 text.WriteLine("Bcc: {0}", Bcc);
             text.WriteLine("Subject: {0}", Subject);
-            if (!string.IsNullOrEmpty(Attachments))
-                text.WriteLine("Attachments: {0}", Attachments);
+            if (AttachmentCount > 0)
+                text.WriteLine("Attachments: {0}", AttachmentCount);
             envelope = text.ToString();
         }
         return envelope;
