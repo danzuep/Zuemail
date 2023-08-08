@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <PackageId>Zuemail.MailKit</PackageId>
+    <Title>Fluent MailKit SMTP Sender and IMAP Receiver</Title>
+    <Description>Easy, fluent way to send, receive, forward, and reply to emails with MailKit.</Description>
+    <PackageTags>MailKit; SMTP; IMAP; email; send; receive; forward; reply; simply; easily; simple; easy; fluent; C#; .NET</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/danzuep/MailKitSimplified</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/danzuep/MailKitSimplified</RepositoryUrl>
+    <Authors>Daniel Collingwood</Authors>
+    <PackageReleaseNotes>
+      0.1.0 SmtpSender and ImapReceiver
+    </PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\.github\**">
+      <LinkBase>.github</LinkBase>
+    </None>
+    <None Include="..\..\resources\icon.png">
+      <Pack>True</Pack>
+      <Visible>False</Visible>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <Visible>False</Visible>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.1.0" />
+    <PackageReference Include="MimeKit" Version="4.1.0" />
+    <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.2.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zuemail.Core\Zuemail.Core.csproj" />
+  </ItemGroup>
+
+</Project>
