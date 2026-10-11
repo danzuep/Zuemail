@@ -7,6 +7,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="Zuemail.Core.Tests/Zuemail.Core.Tests.csproj" />
+    <Project Path="Zuemail.MailKit.Tests/Zuemail.MailKit.Tests.csproj" />
   </Folder>
   <Project Path="ConsoleServiceExample/ConsoleServiceExample.csproj" />
   <Project Path="Zuemail.Core/Zuemail.Core.csproj" />

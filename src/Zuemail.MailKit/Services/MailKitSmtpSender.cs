@@ -24,22 +24,25 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
     private readonly ILogger<MailKitSmtpSender> _logger;
     private readonly ISmtpClient _smtpClient;
     private readonly SmtpOptions _senderOptions;
+    private readonly bool _ownsClient;
 
-    public MailKitSmtpSender(IOptions<SmtpOptions> senderOptions, IValidationStrategy<MimeMessage> validation, ILogger<MailKitSmtpSender> logger = null, ISmtpClient smtpClient = null)
+    public MailKitSmtpSender(IOptions<SmtpOptions> senderOptions, IValidationStrategy<MimeMessage> validation = null, ILogger<MailKitSmtpSender> logger = null, ISmtpClient smtpClient = null)
     {
-        this._validation = validation;
+        this._validation = validation ?? new MimeMessageValidator();
         _logger = logger ?? NullLogger<MailKitSmtpSender>.Instance;
         _senderOptions = senderOptions.Value;
         if (string.IsNullOrWhiteSpace(_senderOptions.Host))
             throw new ArgumentException($"{nameof(SmtpOptions.Host)} is not set.");
-        _smtpClient = smtpClient ?? _senderOptions.SmtpClient.Value;
+        _ownsClient = smtpClient == null;
+        _smtpClient = smtpClient ?? _senderOptions.CreateSmtpClient();
     }
 
     public static MailKitSmtpSender Create(string smtpHost, ISmtpClient smtpClient = null, IValidationStrategy<MimeMessage> validation = null, ILogger<MailKitSmtpSender> logger = null)
     {
         if (string.IsNullOrWhiteSpace(smtpHost))
             throw new ArgumentNullException(nameof(smtpHost));
-        var emailOptions = (SmtpOptions)EmailOptions.Create(smtpHost);
+        var emailOptions = new SmtpOptions();
+        emailOptions.SetHost(smtpHost);
         var senderOptions = Options.Create(emailOptions);
         var sender = new MailKitSmtpSender(senderOptions, validation, logger, smtpClient);
         return sender;
@@ -51,8 +54,10 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
 
     public async Task SendAsync(IEmailMessage email, CancellationToken cancellationToken = default)
     {
-        var mimeMessage = email.ToMimeMessage();
-        await _smtpClient.SendAsync(mimeMessage, cancellationToken).ConfigureAwait(false);
+        if (email == null)
+            throw new ArgumentNullException(nameof(email));
+        using var mimeMessage = email.ToMimeMessage(cancellationToken);
+        await SendAsync(mimeMessage, null, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> TrySendAsync(IEmailMessage email, CancellationToken cancellationToken = default)
@@ -61,6 +66,10 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
         {
             await SendAsync(email, cancellationToken).ConfigureAwait(false);
             return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (AuthenticationException ex)
         {
@@ -85,8 +94,13 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
 
     public async Task SendAsync(MimeMessage mimeMessage, ITransferProgress transferProgress, CancellationToken cancellationToken = default)
     {
-        _ = await _validation.ValidateAsync(mimeMessage).ConfigureAwait(false);
-        await _senderOptions.ConnectAuthenticateAsync(cancellationToken).ConfigureAwait(false);
+        if (mimeMessage == null)
+            throw new ArgumentNullException(nameof(mimeMessage));
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!await _validation.ValidateAsync(mimeMessage).ConfigureAwait(false))
+            throw new InvalidOperationException("The MIME message failed validation and was not sent.");
+        cancellationToken.ThrowIfCancellationRequested();
+        await _senderOptions.ConnectAuthenticateAsync(_smtpClient, cancellationToken).ConfigureAwait(false);
         _logger.LogTrace($"Sending {mimeMessage.GetEnvelope(includeTextBody: true)}");
         string serverResponse = await _smtpClient.SendAsync(mimeMessage, cancellationToken, transferProgress).ConfigureAwait(false);
         _logger.LogTrace($"{_senderOptions} server response: \"{serverResponse}\".");
@@ -100,6 +114,10 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
         {
             await SendAsync(mimeMessage, transferProgress, cancellationToken).ConfigureAwait(false);
             isSent = true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (AuthenticationException ex)
         {
@@ -124,16 +142,18 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
     public async ValueTask DisposeAsync()
     {
         _logger.LogTrace("Disposing MailKit SMTP email client {Sender}...", this);
-        if (_smtpClient.IsConnected)
+        if (_ownsClient && _smtpClient.IsConnected)
             await _smtpClient.DisconnectAsync(true).ConfigureAwait(false);
-        _smtpClient.Dispose();
+        if (_ownsClient)
+            _smtpClient.Dispose();
     }
 
     public void Dispose()
     {
         _logger.LogTrace("Disposing MailKit SMTP email client {Sender}...", this);
-        if (_smtpClient.IsConnected)
+        if (_ownsClient && _smtpClient.IsConnected)
             _smtpClient.Disconnect(true);
-        _smtpClient.Dispose();
+        if (_ownsClient)
+            _smtpClient.Dispose();
     }
 }

@@ -11,7 +11,7 @@ using Zuemail.MailKit.Extensions;
 using Zuemail.MailKit.Abstractions;
 using Xunit;
 
-namespace Zuemail.Core.Tests;
+namespace Zuemail.MailKit.Tests;
 
 public class ImapReceiverTests
 {

@@ -30,6 +30,8 @@ namespace Zuemail.MailKit.Extensions
                         imapClient.Capabilities &= ~(ImapCapabilities)clientOptions.CapabilitiesToRemove;
                 }
             }
+            foreach (var mechanism in clientOptions.AuthenticationMechanismsToRemove ?? Array.Empty<string>())
+                client.AuthenticationMechanisms.Remove(mechanism);
             if (!client.IsAuthenticated)
             {
                 if (clientOptions.AuthenticationCapabilities != null)

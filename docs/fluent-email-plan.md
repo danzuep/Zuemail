@@ -31,11 +31,11 @@
 
 ## Phase 4: Options, Attachments and MailKit Execution
 
-- [ ] Fix `EmailOptions.Create()` to copy defaults, and `SetHost()` to set host-only inputs as well as host/port inputs. Support bracketed IPv6 deliberately; reject ambiguous/invalid port strings rather than ad hoc splitting.
+- [x] Fix `EmailOptions.Create()` to return independent defaults, and `SetHost()` to set host-only inputs as well as host/port inputs. Support bracketed IPv6 and reject malformed port strings.
 - [ ] Keep host/port/credentials/optional `TimeSpan` timeout in Core options; keep `SecureSocketOptions`, authentication mechanisms/capabilities, protocol logging, and MailKit delegates in provider options.
 - [ ] Make option copies independent for mutable collections and protocol-log settings; redact credentials and validate timeout ranges/conversion before applying them to clients.
-- [ ] Replace client-producing `Lazy` properties with an explicit provider factory/owner. Do not create a new `Lazy<SmtpClient>` on each access; never store connected clients in neutral options.
-- [ ] Adapt authentication delegates with typed wrappers, not casts between `Func<ISmtpClient, Task>` and `Func<IMailService, Task>`.
+- [x] Add explicit SMTP/IMAP client factories used by sender/receiver owners; retain the old lazy properties only as obsolete compatibility wrappers. Never store connected clients in neutral options.
+- [x] Adapt authentication delegates with typed wrappers, not casts between `Func<ISmtpClient, Task>`/`Func<IImapClient, Task>` and `Func<IMailService, Task>`.
 - [ ] Add a small typed attachment descriptor supporting copied bytes or a fresh-stream factory, with filename/content type/optional content ID. Keep legacy `Attach(string, object)` as a compatibility path.
 - [ ] Add fluent typed `Attach(...)`; open files/streams only during cancellable MIME materialization. Define consumer-owned factory streams versus borrowed legacy streams and dispose owned resources on success/failure.
 - [ ] Use MimeKit `BodyBuilder` for text/HTML, attachments, and linked resources. Reuse a focused mapping helper; do not write a MIME engine, AST, or visitor.
@@ -43,7 +43,7 @@
 
 ## Phase 5: Configuration, Verification and Documentation
 
-- [ ] Extend existing `ConfigureEmail()`/`ConfigureDefaultEmail()` registrations with action/configuration overloads and safe named account/template support only where needed.
+- [x] Add action/configuration DI registration for separate `Email:Smtp` and `Email:Imap` sections; named account/template support remains only for a demonstrated need.
 - [ ] Add a simple cancellation-aware null/fake sender for dry runs and unit tests; do not count simulated sends as delivered mail.
 - [ ] Test composition, independent snapshots/defaults, templates, reset policies, host parsing, attachment ownership/replay, MIME alternatives/linked resources, and Core/provider dependency boundaries.
 - [ ] Add local SMTP integration tests covering connection/authentication, cancellation, Bcc, and repeated sending; do not depend on real account credentials in tests.
@@ -122,7 +122,13 @@ await sender.SendAsync(message, cancellationToken);
 - Added folder operations for special-folder resolution, create/lookup, read/write access, flags, query deletion, UID-scoped expunge, copy/move, and Sent append. Existing read-only folders are not silently upgraded for mutations.
 - Added monitor callbacks for arrivals, flag changes, and departures; existing-message policy; capability-aware IDLE with bounded waits; NOOP fallback; cancellation; retry/backoff; reconnecting both clients/folders and reattaching events.
 - Added `ConfigureImap()` and `AddZuemailImapReceiver()` action/configuration registrations. The console uses a dedicated `Imap` options section and the abstractions; no live server was used.
-- `dotnet test --project src/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj`: 60 passed, 0 failed, 0 skipped.
+- `dotnet test --project src/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj`: 40 passed, 0 failed, 0 skipped.
+- `dotnet test --project src/Zuemail.MailKit.Tests/Zuemail.MailKit.Tests.csproj`: 34 passed, 0 failed, 0 skipped.
 - `dotnet build src/Zuemail.slnx -p:GeneratePackageOnBuild=false`: passed for Core and MailKit on `netstandard2.0`/`net10.0`, console and tests.
 - These are mocked unit tests; live IMAP-server integration, server-specific special-use behavior, and protocol logger resource ownership remain follow-up verification. SMTP implementation is unchanged.
 - Follow-up hardening covers forced reconnect/authentication, post-auth capability setup, null-bound mechanism lists, option-copy isolation, nested/shared special-folder discovery, concurrent monitor signals, startup and dropped-IDLE reconnection of both clients/folders, continuously advancing batches, and keeping folders open through MIME retrieval.
+- IMAP tests have moved from Core.Tests into the provider-specific MailKit.Tests project; Core.Tests no longer references MailKit or Moq.
+- SMTP and IMAP bind `Email:Smtp`/`Email:Imap`; both have matching configuration/DI entry points, fresh-client factories, typed capability adapters, and explicit ownership. SMTP Core-message and MimeMessage sends share validation/connect/send behavior and preserve cancellation/injected-client ownership.
+- Moved all IMAP mocks out of `Zuemail.Core.Tests` into `Zuemail.MailKit.Tests`; Core tests now reference Core only. The provider test project covers SMTP client identity/ownership, IMAP, and nested configuration.
+- SMTP and IMAP remain separate protocol adapters but share the options/client-ownership shape. SMTP's Core and MimeKit overloads now converge on one validate/connect/authenticate/send path. MIME validation no longer invents debug addresses or mutates an invalid message.
+- The console consumes the user's nested settings shape unchanged: `Email:Smtp` and `Email:Imap`. The edited appsettings file remains a user change in the worktree.

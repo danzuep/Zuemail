@@ -7,7 +7,7 @@ using Zuemail.MailKit.Models;
 using Zuemail.MailKit.Services;
 using Xunit;
 
-namespace Zuemail.Core.Tests;
+namespace Zuemail.MailKit.Tests;
 
 public class MailFolderMonitorTests
 {

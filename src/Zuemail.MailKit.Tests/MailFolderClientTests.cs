@@ -5,7 +5,7 @@ using Zuemail.MailKit.Abstractions;
 using Zuemail.MailKit.Services;
 using Xunit;
 
-namespace Zuemail.Core.Tests;
+namespace Zuemail.MailKit.Tests;
 
 public class MailFolderClientTests
 {

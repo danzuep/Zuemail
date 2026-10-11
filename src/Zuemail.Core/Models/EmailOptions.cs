@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 
 namespace Zuemail.Core.Models
 {
@@ -27,7 +26,10 @@ namespace Zuemail.Core.Models
 
         public static EmailOptions Create(string host)
         {
-            var options = Default.SetHost(host);
+            if (string.IsNullOrWhiteSpace(host))
+                throw new ArgumentNullException(nameof(host));
+            var options = new EmailOptions();
+            options.SetHost(host);
             return options;
         }
 
@@ -35,12 +37,40 @@ namespace Zuemail.Core.Models
         {
             if (string.IsNullOrWhiteSpace(host))
                 throw new ArgumentNullException(nameof(host));
-            var array = host.Split(':');
-            if (array.Length > 1 && ushort.TryParse(array.LastOrDefault(), out ushort port))
+
+            string parsedHost = host;
+            ushort? parsedPort = null;
+            if (host[0] == '[')
             {
-                Host = array.First();
-                Port = port;
+                var closingBracket = host.IndexOf(']');
+                if (closingBracket < 0)
+                    throw new ArgumentException("The bracketed IPv6 host is invalid.", nameof(host));
+                parsedHost = host.Substring(1, closingBracket - 1);
+                var suffix = host.Substring(closingBracket + 1);
+                if (suffix.Length > 0)
+                {
+                    if (suffix[0] != ':' || !ushort.TryParse(suffix.Substring(1), out var ipv6Port))
+                        throw new ArgumentException("The host port is invalid.", nameof(host));
+                    parsedPort = ipv6Port;
+                }
             }
+            else
+            {
+                var colonIndex = host.LastIndexOf(':');
+                if (colonIndex > 0 && host.IndexOf(':') == colonIndex)
+                {
+                    if (!ushort.TryParse(host.Substring(colonIndex + 1), out var hostPort))
+                        throw new ArgumentException("The host port is invalid.", nameof(host));
+                    parsedHost = host.Substring(0, colonIndex);
+                    parsedPort = hostPort;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(parsedHost))
+                throw new ArgumentException("A host is required.", nameof(host));
+            Host = parsedHost;
+            if (parsedPort.HasValue)
+                Port = parsedPort.Value;
             return this;
         }
 

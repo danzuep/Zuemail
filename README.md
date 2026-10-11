@@ -7,9 +7,10 @@ Zuemail is a small .NET email library built around a fluent, reusable message bu
 - `src/Zuemail.Core` contains message and contact models, fluent builder/handler contracts, templates, validation, and transport-neutral options.
 - `src/Zuemail.MailKit` adapts Core messages to MimeKit and provides MailKit SMTP/IMAP integration, authentication, TLS, and protocol options.
 - `src/ConsoleServiceExample` demonstrates composing messages and using the MailKit clients.
-- `src/Zuemail.Core.Tests` contains focused Core tests, run with Microsoft.Testing.Platform.
+- `src/Zuemail.Core.Tests` contains transport-independent Core tests.
+- `src/Zuemail.MailKit.Tests` tests SMTP/IMAP integration and provider configuration. Both test projects use Microsoft.Testing.Platform.
 
-The Core and MailKit libraries target `netstandard2.0` and `net10.0`; the console and tests target `net10.0`. See [the architecture diagrams](docs/architecture.md) and [the implementation plan](docs/fluent-email-plan.md).
+The Core and MailKit libraries target `netstandard2.0` and `net10.0`; the console and tests target `net10.0`. SMTP and IMAP settings bind separately under `Email:Smtp` and `Email:Imap`. See [the architecture diagrams](docs/architecture.md) and [the implementation plan](docs/fluent-email-plan.md).
 
 ## Fluent Composition
 
@@ -35,6 +36,9 @@ var message = template.Copy()
 ```sh
 dotnet build src/Zuemail.slnx -p:GeneratePackageOnBuild=false
 dotnet test --project src/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj
+dotnet test --project src/Zuemail.MailKit.Tests/Zuemail.MailKit.Tests.csproj
 ```
+
+SMTP and IMAP settings are separate nested sections under `Email:Smtp` and `Email:Imap`; see [the architecture guide](docs/architecture.md).
 
 The console sample uses configured mail servers and performs real network operations when run; building it does not send or receive mail. Use [smtp4dev](https://github.com/rnwood/smtp4dev) or similar to try it out locally, e.g. `docker run -d -p 3000:80 -p 25:25 -p 143:143 rnwood/smtp4dev`.

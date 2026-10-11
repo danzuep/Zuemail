@@ -209,10 +209,7 @@ public sealed class ImapReceiver : IImapReceiver
 
     private IImapClient CreateClient(IProtocolLogger protocolLogger)
     {
-        var logger = protocolLogger ?? _options.ProtocolLogger().Value;
-        var client = logger == null ? new ImapClient() : new ImapClient(logger);
-        client.Timeout = _options.TimeoutMs;
-        return client;
+        return _options.CreateImapClient(protocolLogger);
     }
 
     private void ThrowIfDisposed()

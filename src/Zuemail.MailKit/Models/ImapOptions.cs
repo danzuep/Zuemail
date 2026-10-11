@@ -14,7 +14,7 @@ namespace Zuemail.MailKit.Models
     public sealed class ImapOptions : MailOptions
     {
         /// <summary>The configuration section used for IMAP accounts.</summary>
-        public new const string SectionName = "Imap";
+        public new const string SectionName = EmailOptions.SectionName + ":Imap";
 
         /// <summary>Gets or sets the folder opened by default.</summary>
         public string MailFolderName { get; set; } = "INBOX";
@@ -63,12 +63,21 @@ namespace Zuemail.MailKit.Models
             return copy;
         }
 
-        public Lazy<ImapClient> ImapClient => new Lazy<ImapClient>(() =>
-            ProtocolLogger().Value == null ? new ImapClient() { Timeout = TimeoutMs } :
-                new ImapClient(ProtocolLogger().Value) { Timeout = TimeoutMs });
+        /// <summary>Creates a fresh IMAP client with this option set's timeout and logger.</summary>
+        public ImapClient CreateImapClient(IProtocolLogger protocolLogger = null)
+        {
+            protocolLogger ??= ProtocolLogger().Value;
+            var client = protocolLogger == null ? new ImapClient() : new ImapClient(protocolLogger);
+            client.Timeout = TimeoutMs;
+            return client;
+        }
+
+        /// <summary>Creates the legacy lazy client wrapper.</summary>
+        [Obsolete("Prefer CreateImapClient and let the receiver own its client lifetime.")]
+        public Lazy<ImapClient> ImapClient => new Lazy<ImapClient>(() => CreateImapClient());
 
         public async ValueTask ConnectAuthenticateAsync(CancellationToken cancellationToken = default) =>
-            await ImapClient.Value.GetConnectedAuthenticatedAsync<ImapClient>(this, cancellationToken).ConfigureAwait(false);
+            await CreateImapClient().GetConnectedAuthenticatedAsync<ImapClient>(this, cancellationToken).ConfigureAwait(false);
 
     }
 }

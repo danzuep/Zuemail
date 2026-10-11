@@ -16,7 +16,7 @@ var logger = loggerFactory.CreateLogger<Program>();
 
 var configuration = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json").Build();
 
-var emailSenderOptions = configuration.GetRequiredSection(EmailOptions.SectionName).Get<SmtpOptions>()!;
+var emailSenderOptions = configuration.GetRequiredSection(SmtpOptions.SectionName).Get<SmtpOptions>()!;
 using var smtpSender = new MailKitSmtpSender(Options.Create(emailSenderOptions), new MimeMessageValidator(),
     loggerFactory.CreateLogger<MailKitSmtpSender>());
 await smtpSender.SmtpClient.GetConnectedAuthenticatedAsync<SmtpClient>(emailSenderOptions);
