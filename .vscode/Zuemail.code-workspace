@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"dotnet.defaultSolution": "Zuemail/src/Zuemail.slnx",
+		"powershell.cwd": "Zuemail"
+	}
+}
