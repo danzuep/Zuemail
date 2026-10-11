@@ -88,6 +88,8 @@ namespace Zuemail.MailKit.Models
         {
             var copy = MemberwiseClone() as MailOptions;
             copy.ProtocolLog = ProtocolLog.Copy();
+            copy.AuthenticationMechanismsToRemove = new List<string>(AuthenticationMechanismsToRemove ?? new List<string>());
+            copy.Credential = new NetworkCredential(Username ?? string.Empty, Password ?? string.Empty);
             return copy;
         }
     }

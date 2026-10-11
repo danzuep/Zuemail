@@ -35,39 +35,41 @@ var secondEmail = writtenEmail.Copy().To("new@io").Build();
 isSent = await smtpSender.TrySendAsync(secondEmail);
 logger.LogInformation("Email 2 {result}.", isSent ? "sent" : "failed to send");
 
-var emailReceiverOptions = configuration.GetRequiredSection(EmailOptions.SectionName).Get<ImapOptions>()!;
-using var imapClient = new ImapClient { Timeout = emailReceiverOptions.TimeoutMs };
-await imapClient.ConnectAsync(emailReceiverOptions.Host, emailReceiverOptions.Port, emailReceiverOptions.SocketOptions);
-await imapClient.AuthenticateAsync(emailReceiverOptions.Credential);
-
-var inbox = imapClient.Inbox;
-await inbox.OpenAsync(FolderAccess.ReadOnly);
+var emailReceiverOptions = configuration.GetRequiredSection(ImapOptions.SectionName).Get<ImapOptions>()!;
+using var imapReceiver = new ImapReceiver(Options.Create(emailReceiverOptions), loggerFactory.CreateLogger<ImapReceiver>());
+await imapReceiver.ConnectAuthenticatedImapClientAsync();
+var mailFolderClient = imapReceiver.MailFolderClient;
+var inbox = await mailFolderClient.ConnectAsync();
 if (inbox.Count > 5)
 {
-    var messageSummaries = await inbox.FetchAsync(5, Math.Min(6, inbox.Count - 1), MessageSummaryItems.UniqueId);
+    var messageSummaries = await imapReceiver.ReadMail.Skip(5).Take(2)
+        .GetMessageSummariesAsync(CancellationToken.None);
     logger.LogDebug("Email(s) received: {ids}.", string.Join(", ", messageSummaries.Select(message => message.UniqueId)));
 }
 if (inbox.Count > 0)
 {
-    using var message = await inbox.GetMessageAsync(0);
-    logger.LogDebug("Email received: {id}.", message.MessageId);
+    var messages = await imapReceiver.ReadMail.Top(1).GetMimeMessagesAsync(CancellationToken.None);
+    foreach (var message in messages)
+    {
+        using (message)
+            logger.LogDebug("Email received: {id}.", message.MessageId);
+    }
 }
 
-if (imapClient.Capabilities.HasFlag(ImapCapabilities.Idle))
+if (imapReceiver.ImapClient.Capabilities.HasFlag(ImapCapabilities.Idle))
 {
     using var cancellation = new CancellationTokenSource();
     Console.CancelKeyPress += (_, args) => { args.Cancel = true; cancellation.Cancel(); };
-    inbox.CountChanged += (_, _) => logger.LogInformation("Inbox contains {count} messages.", inbox.Count);
+    var monitor = imapReceiver.MonitorFolder
+        .SetIgnoreExistingMailOnConnect()
+        .SetMessageSummaryItems(MessageSummaryItems.Envelope)
+        .OnMessageArrival(summary => logger.LogInformation("New message {uid}: {subject}", summary.UniqueId, summary.Envelope?.Subject));
     try
     {
-        while (!cancellation.IsCancellationRequested)
-        {
-            using var idle = new CancellationTokenSource(TimeSpan.FromMinutes(9));
-            await imapClient.IdleAsync(idle.Token, cancellation.Token);
-        }
+        await monitor.IdleAsync(cancellation.Token);
     }
     catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
     {
     }
 }
-await imapClient.DisconnectAsync(true);
+await imapReceiver.DisconnectAsync();

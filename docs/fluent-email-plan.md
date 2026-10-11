@@ -49,6 +49,8 @@
 - [ ] Add local SMTP integration tests covering connection/authentication, cancellation, Bcc, and repeated sending; do not depend on real account credentials in tests.
 - [ ] Verify both library TFMs and update the console sample/README with concise fluent usage, DI registration, ownership, and migration notes.
 - [x] Replace the console's nonexistent receiver wrapper with native MailKit IMAP APIs for reading and IDLE monitoring; build the sample against Core and MailKit only.
+- [x] Replace the console's raw MailKit IMAP lifecycle with Zuemail `IImapReceiver`, `IMailReader`, `IMailFolderClient`, and `IMailFolderMonitor` APIs.
+- [x] Add DI registration for configured and action-based IMAP options with transient receiver/client ownership.
 
 ## Later, Only When Needed
 
@@ -111,3 +113,15 @@ await sender.SendAsync(message, cancellationToken);
 - The default validator uses BCL address parsing, accepts To/Cc/Bcc recipients and legitimate self-addressed mail, rejects header injection, and does not invent debug-only sender/reply addresses.
 - The console now demonstrates reusable composition and independent per-recipient messages instead of sharing live builder state. It was compiled, not executed against a server.
 - Next: phase 4 option factories/host parsing and MailKit client ownership, followed by typed attachments. MailKit's direct sender paths still need their provider-specific validation/lifecycle/cancellation work; Core fake-sender tests do not claim those paths are fixed.
+
+## Verified IMAP Increment
+
+- Added `IImapReceiver` with explicit injected/owned client behavior, cancellation-aware connect/authenticate, forced reconnect, typed authentication/capability setup, folder resolution/listing, disconnect, clone, and sync/async disposal.
+- Added `ImapOptions` settings for folder/access, explicit SASL/custom auth, removable capabilities/mechanisms, and protocol-client configuration. Copies isolate mutable mechanism lists and credentials; capability delegates use typed adapters and run after authentication.
+- Added fluent summary/MIME reader selection with `Top`, `Skip`, `Take`, continuous batches, UID ranges, `SearchQuery`, summary fields, cancellation, and transfer progress. MIME retrieval holds folders open while downloading and disposes partial results on failure.
+- Added folder operations for special-folder resolution, create/lookup, read/write access, flags, query deletion, UID-scoped expunge, copy/move, and Sent append. Existing read-only folders are not silently upgraded for mutations.
+- Added monitor callbacks for arrivals, flag changes, and departures; existing-message policy; capability-aware IDLE with bounded waits; NOOP fallback; cancellation; retry/backoff; reconnecting both clients/folders and reattaching events.
+- Added `ConfigureImap()` and `AddZuemailImapReceiver()` action/configuration registrations. The console uses a dedicated `Imap` options section and the abstractions; no live server was used.
+- `dotnet test --project src/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj`: 55 passed, 0 failed, 0 skipped.
+- `dotnet build src/Zuemail.slnx -p:GeneratePackageOnBuild=false`: passed for Core and MailKit on `netstandard2.0`/`net10.0`, console and tests.
+- These are mocked unit tests; live IMAP-server integration, server-specific special-use behavior, and protocol logger resource ownership remain follow-up verification. SMTP implementation is unchanged.

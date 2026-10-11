@@ -49,20 +49,23 @@ sequenceDiagram
 
 ## Connect and Monitor IMAP
 
-The current console sample owns an `ImapClient` directly: it binds `ImapOptions`, connects and authenticates, opens INBOX read-only, fetches summaries/messages, and uses IDLE only when the server advertises that capability. IDLE is renewed periodically and Ctrl+C cancels the wait. There is not currently a Zuemail IMAP receiver/monitor abstraction; this diagram describes the sample's direct MailKit flow.
+The console uses `IImapReceiver` to connect/authenticate and provides a fluent reader, folder client, and event-based monitor. The reader fetches INBOX summaries/messages with read-only folder access. The monitor uses IDLE only when the server advertises that capability, renews the IDLE wait, falls back to NOOP polling when IDLE is unavailable, dispatches arrivals/flag changes/departures, and supports cancellation/reconnect retries.
 
 ```mermaid
 sequenceDiagram
     actor App as Console application
     participant Config as IConfiguration
     participant Options as ImapOptions
+    participant Receiver as IImapReceiver
     participant Client as MailKit ImapClient
     participant Inbox as INBOX (read-only)
 
     App->>Config: Bind Email section to ImapOptions
-    App->>Client: Create client with configured timeout
-    App->>Client: ConnectAsync(host, port, TLS)
-    App->>Client: AuthenticateAsync(credentials)
+    App->>Receiver: Resolve receiver
+    App->>Receiver: ConnectAuthenticatedImapClientAsync
+    Receiver->>Client: ConnectAsync(host, port, TLS)
+    Receiver->>Client: AuthenticateAsync(credentials)
+    App->>Receiver: ReadMail.Skip().Take()
     App->>Inbox: OpenAsync(ReadOnly)
     opt Inbox has messages
         App->>Inbox: Fetch summaries
@@ -72,9 +75,12 @@ sequenceDiagram
     end
     alt Server advertises IMAP IDLE
         loop Until Ctrl+C
-            App->>Inbox: Subscribe to CountChanged
-            App->>Client: IdleAsync(9-minute timeout, cancellation)
-            Inbox-->>App: CountChanged notification
+            App->>Receiver: MonitorFolder.IdleAsync
+            Receiver->>Inbox: Subscribe to folder-change events
+            Receiver->>Client: IdleAsync (bounded wait)
+            Inbox-->>Receiver: Count/flags/expunge event
+            Receiver->>Inbox: Fetch updated summaries
+            Receiver-->>App: Arrival/flags/departure callback
         end
     else IDLE unavailable
         App->>App: Skip monitoring
@@ -98,6 +104,6 @@ Retries, decorators, channel-backed queues, durable outbox processing, and an IM
 
 - Core owns generic message composition, copy/template behavior, and validation contracts. Its builder does not connect or send.
 - MailKit owns MIME conversion and protocol-specific SMTP/IMAP behavior. Provider settings include TLS, authentication capabilities, and protocol logging.
-- The application owns configuration and chooses when to call a sender. Avoid sharing mutable templates between independent handlers; builders copy configured templates.
+- The application owns configuration and chooses when to call a sender/receiver. Avoid sharing mutable templates between independent handlers; builders copy configured templates.
 - Message copies clone collections, contacts, and byte-array attachments. Legacy streams and arbitrary non-byte attachment values remain borrowed references.
-- The console project is an example composition root, not another library layer.
+- The console project is an example composition root, not another library layer. It uses the Zuemail IMAP receiver abstraction rather than handling raw IMAP client lifecycle itself.
