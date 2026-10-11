@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <Authors>Daniel Collingwood</Authors>
+    <PackageId>Zuemail.Core</PackageId>
+    <Title>MailKitSimplified core library</Title>
+    <Description>Core methods for the MailKit wrapper package that simplifies the sending and receiving of emails.</Description>
+    <PackageTags>MailKit; MimeKit; email; simply; easily; simple; easy; fluent; C#; .NET</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/danzuep/MailKitSimplified</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/danzuep/MailKitSimplified</PackageProjectUrl>
+    <PackageReleaseNotes>
+      0.1.0 EmailMessageBuilder and EmailMessageHandler
+    </PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\.github\**">
+      <LinkBase>.github</LinkBase>
+    </None>
+    <None Include="..\..\resources\icon.png">
+      <Pack>True</Pack>
+      <Visible>False</Visible>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <Visible>False</Visible>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Common" Version="8.2.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
+    <PackageReference Include="System.IO.Abstractions" Version="19.2.51" />
+  </ItemGroup>
+
+</Project>
