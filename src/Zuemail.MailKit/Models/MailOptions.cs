@@ -87,7 +87,7 @@ namespace Zuemail.MailKit.Models
         public override EmailOptions Copy()
         {
             var copy = MemberwiseClone() as MailOptions;
-            copy.ProtocolLog = ProtocolLog.Copy();
+            copy.ProtocolLog = ProtocolLog?.Copy() ?? new ProtocolLoggerOptions();
             copy.AuthenticationMechanismsToRemove = new List<string>(AuthenticationMechanismsToRemove ?? new List<string>());
             copy.Credential = new NetworkCredential(Username ?? string.Empty, Password ?? string.Empty);
             return copy;

@@ -10,6 +10,31 @@ namespace Zuemail.Core.Tests;
 public class MailFolderClientTests
 {
     [Fact]
+    public void SentFolder_FindsNestedFoldersAcrossNamespaces()
+    {
+        var sent = new Mock<IMailFolder>();
+        sent.SetupGet(value => value.Name).Returns("Sent Mail");
+        sent.SetupGet(value => value.FullName).Returns("[Gmail]/Sent Mail");
+        var gmail = new Mock<IMailFolder>();
+        gmail.SetupGet(value => value.Name).Returns("[Gmail]");
+        gmail.SetupGet(value => value.FullName).Returns("[Gmail]");
+        gmail.Setup(value => value.GetSubfolders(false, It.IsAny<CancellationToken>())).Returns(new List<IMailFolder> { sent.Object });
+        var root = new Mock<IMailFolder>();
+        root.Setup(value => value.GetSubfolders(false, It.IsAny<CancellationToken>())).Returns(new List<IMailFolder> { gmail.Object });
+        var client = new Mock<IImapClient>();
+        client.SetupGet(value => value.Capabilities).Returns(ImapCapabilities.None);
+        client.SetupGet(value => value.PersonalNamespaces).Returns(new FolderNamespaceCollection { new FolderNamespace('/', "") });
+        client.SetupGet(value => value.SharedNamespaces).Returns(new FolderNamespaceCollection());
+        client.SetupGet(value => value.OtherNamespaces).Returns(new FolderNamespaceCollection());
+        client.Setup(value => value.GetFolder(It.IsAny<FolderNamespace>())).Returns(root.Object);
+        var receiver = new Mock<IImapReceiver>();
+        receiver.SetupGet(value => value.ImapClient).Returns(client.Object);
+        using var folderClient = new MailFolderClient(receiver.Object);
+
+        Assert.Same(sent.Object, folderClient.SentFolder);
+    }
+
+    [Fact]
     public async Task AddFlags_OpensWriteAccessAndClosesOnlyTheFolderItOpened()
     {
         var open = false;

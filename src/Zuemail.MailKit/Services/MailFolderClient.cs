@@ -275,13 +275,21 @@ public sealed class MailFolderClient : IMailFolderClient
             catch (FolderNotFoundException) { }
         }
         var candidates = SpecialFolderNames[index];
-        foreach (var folderNamespace in client.PersonalNamespaces)
+        var pending = new Queue<IMailFolder>();
+        foreach (var folderNamespace in client.PersonalNamespaces.Concat(client.SharedNamespaces).Concat(client.OtherNamespaces))
         {
             var root = client.GetFolder(folderNamespace);
-            var folders = root.GetSubfolders(false, CancellationToken.None);
-            var match = folders.FirstOrDefault(folder => candidates.Contains(folder.Name, StringComparer.OrdinalIgnoreCase));
-            if (match != null)
-                return match;
+            foreach (var folder in root.GetSubfolders(false, CancellationToken.None))
+                pending.Enqueue(folder);
+        }
+        while (pending.Count > 0)
+        {
+            var folder = pending.Dequeue();
+            if (candidates.Contains(folder.Name, StringComparer.OrdinalIgnoreCase) ||
+                candidates.Contains(folder.FullName, StringComparer.OrdinalIgnoreCase))
+                return folder;
+            foreach (var child in folder.GetSubfolders(false, CancellationToken.None))
+                pending.Enqueue(child);
         }
         throw new InvalidOperationException($"The {specialFolder} folder could not be found.");
     }

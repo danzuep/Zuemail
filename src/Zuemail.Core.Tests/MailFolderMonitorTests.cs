@@ -130,6 +130,132 @@ public class MailFolderMonitorTests
             Assert.Equal(MessageFlags.Seen, received[0].Flags);
     }
 
+    [Fact]
+    public async Task IdleAsync_ReconnectsBothClientsAndReopensFoldersAfterRecoverableFailure()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var idleCalls = 0;
+        var idleFolder = OpenEmptyFolder();
+        var fetchFolder = OpenEmptyFolder();
+        var client = new Mock<IImapClient>();
+        client.SetupGet(value => value.Capabilities).Returns(ImapCapabilities.Idle);
+        client.Setup(value => value.IdleAsync(It.IsAny<CancellationToken>(), It.IsAny<CancellationToken>()))
+            .Callback<CancellationToken, CancellationToken>((_, _) =>
+            {
+                idleCalls++;
+                if (idleCalls == 1)
+                    throw new IOException("Simulated dropped connection.");
+                cancellation.Cancel();
+            })
+            .Returns(Task.CompletedTask);
+        var idleReceiver = new Mock<IImapReceiver>();
+        idleReceiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(idleFolder.Object);
+        idleReceiver.Setup(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), It.IsAny<bool>()))
+            .ReturnsAsync(client.Object);
+        idleReceiver.Setup(value => value.DisconnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var fetchReceiver = new Mock<IImapReceiver>();
+        fetchReceiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fetchFolder.Object);
+        fetchReceiver.Setup(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), It.IsAny<bool>()))
+            .ReturnsAsync(client.Object);
+        fetchReceiver.Setup(value => value.DisconnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var root = new Mock<IImapReceiver>();
+        root.SetupSequence(value => value.Clone()).Returns(idleReceiver.Object).Returns(fetchReceiver.Object);
+        using var monitor = new MailFolderMonitor(root.Object);
+        monitor.SetMaxRetries(2).SetRetryDelay(TimeSpan.Zero);
+
+        await monitor.IdleAsync(cancellation.Token);
+
+        Assert.Equal(2, idleCalls);
+        idleReceiver.Verify(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), true), Times.Once);
+        fetchReceiver.Verify(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), true), Times.Once);
+        Assert.True(idleReceiver.Invocations.Count(invocation => invocation.Method.Name == nameof(IImapReceiver.ConnectMailFolderAsync)) >= 2);
+        Assert.True(fetchReceiver.Invocations.Count(invocation => invocation.Method.Name == nameof(IImapReceiver.ConnectMailFolderAsync)) >= 2);
+    }
+
+    [Fact]
+    public async Task IdleAsync_ReconnectsAfterDroppedIdleConnection()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var idleCalls = 0;
+        var folder = OpenEmptyFolder();
+        var client = new Mock<IImapClient>();
+        client.SetupGet(value => value.Capabilities).Returns(ImapCapabilities.Idle);
+        client.Setup(value => value.IdleAsync(It.IsAny<CancellationToken>(), It.IsAny<CancellationToken>()))
+            .Callback<CancellationToken, CancellationToken>((_, _) =>
+            {
+                if (++idleCalls == 1)
+                    throw new IOException("Simulated dropped connection.");
+                cancellation.Cancel();
+            })
+            .Returns(Task.CompletedTask);
+        var idleReceiver = CreateReceiver(folder.Object, client.Object);
+        var fetchReceiver = CreateReceiver(folder.Object, client.Object);
+        var root = new Mock<IImapReceiver>();
+        root.SetupSequence(value => value.Clone()).Returns(idleReceiver.Object).Returns(fetchReceiver.Object);
+        using var monitor = new MailFolderMonitor(root.Object);
+        monitor.SetMaxRetries(2).SetRetryDelay(TimeSpan.Zero);
+
+        await monitor.IdleAsync(cancellation.Token);
+
+        Assert.Equal(2, idleCalls);
+        idleReceiver.Verify(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), true), Times.Once);
+        fetchReceiver.Verify(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), true), Times.Once);
+        Assert.True(idleReceiver.Invocations.Count(invocation => invocation.Method.Name == nameof(IImapReceiver.ConnectMailFolderAsync)) >= 2);
+        Assert.True(fetchReceiver.Invocations.Count(invocation => invocation.Method.Name == nameof(IImapReceiver.ConnectMailFolderAsync)) >= 2);
+    }
+
+    [Fact]
+    public async Task IdleAsync_RetriesTransientInitialFolderConnectionFailure()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var attempts = 0;
+        var folder = OpenEmptyFolder();
+        var client = new Mock<IImapClient>();
+        client.SetupGet(value => value.Capabilities).Returns(ImapCapabilities.Idle);
+        client.Setup(value => value.IdleAsync(It.IsAny<CancellationToken>(), It.IsAny<CancellationToken>()))
+            .Callback<CancellationToken, CancellationToken>((_, _) => cancellation.Cancel())
+            .Returns(Task.CompletedTask);
+        var idleReceiver = new Mock<IImapReceiver>();
+        idleReceiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>()))
+            .Returns(() => ++attempts == 1
+                ? ValueTask.FromException<IMailFolder>(new IOException("Temporary connection failure."))
+                : new ValueTask<IMailFolder>(folder.Object));
+        idleReceiver.Setup(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), It.IsAny<bool>()))
+            .ReturnsAsync(client.Object);
+        idleReceiver.Setup(value => value.DisconnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var fetchReceiver = CreateReceiver(folder.Object, client.Object);
+        var root = new Mock<IImapReceiver>();
+        root.SetupSequence(value => value.Clone()).Returns(idleReceiver.Object).Returns(fetchReceiver.Object);
+        using var monitor = new MailFolderMonitor(root.Object);
+        monitor.SetMaxRetries(2).SetRetryDelay(TimeSpan.Zero);
+
+        await monitor.IdleAsync(cancellation.Token);
+
+        Assert.Equal(2, attempts);
+        idleReceiver.Verify(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), true), Times.Once);
+        fetchReceiver.Verify(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), true), Times.Once);
+    }
+
+    private static Mock<IMailFolder> OpenEmptyFolder()
+    {
+        var folder = new Mock<IMailFolder>();
+        folder.SetupGet(value => value.IsOpen).Returns(true);
+        folder.SetupGet(value => value.Count).Returns(0);
+        folder.Setup(value => value.FetchAsync(0, -1, It.IsAny<IFetchRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<IMessageSummary>());
+        return folder;
+    }
+
+    private static Mock<IImapReceiver> CreateReceiver(IMailFolder folder, IImapClient client)
+    {
+        var receiver = new Mock<IImapReceiver>();
+        receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder);
+        receiver.Setup(value => value.ConnectAuthenticatedImapClientAsync(It.IsAny<CancellationToken>(), It.IsAny<bool>()))
+            .ReturnsAsync(client);
+        receiver.Setup(value => value.DisconnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        return receiver;
+    }
+
     private static Mock<IMessageSummary> Summary(uint uid, MessageFlags flags)
     {
         var summary = new Mock<IMessageSummary>();

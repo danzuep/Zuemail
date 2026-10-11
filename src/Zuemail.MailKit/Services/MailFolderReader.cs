@@ -66,6 +66,10 @@ public sealed class MailFolderReader : IMailFolderReader
 
     public IMailReader Range(UniqueId start, UniqueId end, bool continuous = false)
     {
+        if (!start.IsValid)
+            throw new ArgumentOutOfRangeException(nameof(start));
+        if (!end.IsValid)
+            throw new ArgumentOutOfRangeException(nameof(end));
         if (end.Id < start.Id)
             throw new ArgumentOutOfRangeException(nameof(end), "The end UID must not precede the start UID.");
         _range = new UniqueIdRange(start, end);
@@ -78,6 +82,8 @@ public sealed class MailFolderReader : IMailFolderReader
 
     public IMailReader Range(UniqueId start, int batchSize = 0, bool continuous = true)
     {
+        if (!start.IsValid)
+            throw new ArgumentOutOfRangeException(nameof(start));
         if (batchSize < 0)
             throw new ArgumentOutOfRangeException(nameof(batchSize));
         var endId = batchSize == 0 ? uint.MaxValue : Math.Min(uint.MaxValue, (ulong)start.Id + (uint)batchSize - 1);
@@ -188,7 +194,8 @@ public sealed class MailFolderReader : IMailFolderReader
             return latest.OrderByDescending(item => item.Index).ToList();
         }
 
-        var lastIndex = _take < 0 ? folder.Count - 1 : Math.Min(folder.Count - 1, _skip + _take - 1);
+        var lastIndex = _take < 0 ? folder.Count - 1 :
+            (int)Math.Min(folder.Count - 1L, (long)_skip + _take - 1);
         if (folder.Count == 0 || lastIndex < _skip)
             return new List<IMessageSummary>();
         return await folder.FetchAsync(_skip, lastIndex, _items, cancellationToken).ConfigureAwait(false);

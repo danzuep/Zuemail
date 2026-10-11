@@ -10,6 +10,7 @@ public interface IMailFolderMonitor : IDisposable, IAsyncDisposable
 {
     IMailFolderMonitor SetIdleMinutes(byte minutes = 9);
     IMailFolderMonitor SetMaxRetries(byte retries = 3);
+    IMailFolderMonitor SetRetryDelay(TimeSpan delay);
     IMailFolderMonitor SetIgnoreExistingMailOnConnect(bool ignoreExisting = true);
     IMailFolderMonitor SetMessageSummaryItems(MessageSummaryItems items = MessageSummaryItems.Envelope);
     IMailFolderMonitor OnMessageArrival(Func<IMessageSummary, Task> callback);

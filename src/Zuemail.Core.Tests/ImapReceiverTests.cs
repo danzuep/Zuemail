@@ -95,6 +95,22 @@ public class ImapReceiverTests
     }
 
     [Fact]
+    public async Task ConnectAuthenticated_NullMechanismListIsTreatedAsEmpty()
+    {
+        var client = new Mock<IImapClient>();
+        client.SetupGet(value => value.IsConnected).Returns(true);
+        client.SetupGet(value => value.IsAuthenticated).Returns(true);
+        client.SetupGet(value => value.AuthenticationMechanisms).Returns(new HashSet<string>());
+        using var receiver = new ImapReceiver(Options.Create(new ImapOptions
+        {
+            Host = "imap.example.com",
+            AuthenticationMechanismsToRemove = null!
+        }), imapClient: client.Object);
+
+        Assert.Same(client.Object, await receiver.ConnectAuthenticatedImapClientAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task ConnectAuthenticated_ForceReconnectsAndReauthenticatesOnce()
     {
         var connected = false;

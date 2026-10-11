@@ -86,7 +86,7 @@ public sealed class ImapReceiver : IImapReceiver
                 _logger.LogDebug("Connected to IMAP server {Host}.", _options.Host);
             }
 
-            foreach (var mechanism in _options.AuthenticationMechanismsToRemove)
+            foreach (var mechanism in _options.AuthenticationMechanismsToRemove ?? Enumerable.Empty<string>())
                 client.AuthenticationMechanisms.Remove(mechanism);
 
             var authenticatedNow = false;

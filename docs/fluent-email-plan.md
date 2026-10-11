@@ -122,6 +122,7 @@ await sender.SendAsync(message, cancellationToken);
 - Added folder operations for special-folder resolution, create/lookup, read/write access, flags, query deletion, UID-scoped expunge, copy/move, and Sent append. Existing read-only folders are not silently upgraded for mutations.
 - Added monitor callbacks for arrivals, flag changes, and departures; existing-message policy; capability-aware IDLE with bounded waits; NOOP fallback; cancellation; retry/backoff; reconnecting both clients/folders and reattaching events.
 - Added `ConfigureImap()` and `AddZuemailImapReceiver()` action/configuration registrations. The console uses a dedicated `Imap` options section and the abstractions; no live server was used.
-- `dotnet test --project src/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj`: 55 passed, 0 failed, 0 skipped.
+- `dotnet test --project src/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj`: 60 passed, 0 failed, 0 skipped.
 - `dotnet build src/Zuemail.slnx -p:GeneratePackageOnBuild=false`: passed for Core and MailKit on `netstandard2.0`/`net10.0`, console and tests.
 - These are mocked unit tests; live IMAP-server integration, server-specific special-use behavior, and protocol logger resource ownership remain follow-up verification. SMTP implementation is unchanged.
+- Follow-up hardening covers forced reconnect/authentication, post-auth capability setup, null-bound mechanism lists, option-copy isolation, nested/shared special-folder discovery, concurrent monitor signals, startup and dropped-IDLE reconnection of both clients/folders, continuously advancing batches, and keeping folders open through MIME retrieval.

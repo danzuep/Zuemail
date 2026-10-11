@@ -27,6 +27,7 @@ public sealed class MailFolderMonitor : IMailFolderMonitor
     private bool _disposed;
     private byte _idleMinutes = 9;
     private byte _maxRetries = 3;
+    private TimeSpan _retryDelay = TimeSpan.FromSeconds(2);
     private MessageSummaryItems _items = MessageSummaryItems.Envelope | MessageSummaryItems.Flags;
 
     public MailFolderMonitor(IImapReceiver receiver, ILogger<MailFolderMonitor> logger = null)
@@ -54,6 +55,14 @@ public sealed class MailFolderMonitor : IMailFolderMonitor
         if (retries == 0)
             throw new ArgumentOutOfRangeException(nameof(retries));
         _maxRetries = retries;
+        return this;
+    }
+
+    public IMailFolderMonitor SetRetryDelay(TimeSpan delay)
+    {
+        if (delay < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(delay));
+        _retryDelay = delay;
         return this;
     }
 
@@ -101,10 +110,44 @@ public sealed class MailFolderMonitor : IMailFolderMonitor
         ThrowIfDisposed();
         if (cancellationToken.IsCancellationRequested)
             return;
-        var idleFolder = await _idleReceiver.ConnectMailFolderAsync(cancellationToken).ConfigureAwait(false);
-        var fetchFolder = await _fetchReceiver.ConnectMailFolderAsync(cancellationToken).ConfigureAwait(false);
-        var idleOpened = !idleFolder.IsOpen;
-        var fetchOpened = !fetchFolder.IsOpen;
+        IMailFolder idleFolder = null;
+        IMailFolder fetchFolder = null;
+        var idleOpened = false;
+        var fetchOpened = false;
+        byte initialFailures = 0;
+        while (true)
+        {
+            try
+            {
+                idleFolder = await _idleReceiver.ConnectMailFolderAsync(cancellationToken).ConfigureAwait(false);
+                fetchFolder = await _fetchReceiver.ConnectMailFolderAsync(cancellationToken).ConfigureAwait(false);
+                idleOpened = !idleFolder.IsOpen;
+                fetchOpened = !fetchFolder.IsOpen;
+                if (idleOpened)
+                    await idleFolder.OpenAsync(FolderAccess.ReadOnly, cancellationToken).ConfigureAwait(false);
+                if (fetchOpened)
+                    await fetchFolder.OpenAsync(FolderAccess.ReadOnly, cancellationToken).ConfigureAwait(false);
+                break;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex) when (IsRecoverable(ex) && initialFailures + 1 < _maxRetries)
+            {
+                initialFailures++;
+                _logger.LogWarning(ex, "Initial IMAP folder connection failed; retry {Retry}/{MaxRetries}.", initialFailures, _maxRetries);
+                await ReconnectAsync(cancellationToken).ConfigureAwait(false);
+                var retryDelay = TimeSpan.FromMilliseconds(Math.Min(30000,
+                    _retryDelay.TotalMilliseconds * Math.Pow(2, initialFailures - 1)));
+                await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (handleExceptions && !(ex is OperationCanceledException))
+            {
+                _logger.LogError(ex, "Initial IMAP folder connection failed; monitoring was not started.");
+                return;
+            }
+        }
         EventHandler<EventArgs> changed = (_, _) => SignalChange();
         if (idleOpened)
             await idleFolder.OpenAsync(FolderAccess.ReadOnly, cancellationToken).ConfigureAwait(false);
@@ -190,7 +233,9 @@ public sealed class MailFolderMonitor : IMailFolderMonitor
                         idleFolder.CountChanged += changed;
                         idleFolder.MessageFlagsChanged += OnFlagsChanged;
                         idleFolder.MessageExpunged += OnMessageExpunged;
-                        await Task.Delay(TimeSpan.FromSeconds(Math.Min(30, Math.Pow(2, failures - 1))), cancellationToken).ConfigureAwait(false);
+                        var retryDelay = TimeSpan.FromMilliseconds(Math.Min(30000,
+                            _retryDelay.TotalMilliseconds * Math.Pow(2, failures - 1)));
+                        await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (handleExceptions && !(ex is OperationCanceledException))
                     {
@@ -253,8 +298,14 @@ public sealed class MailFolderMonitor : IMailFolderMonitor
 
     private void SignalChange()
     {
-        if (_changeSignal.CurrentCount == 0)
-            _changeSignal.Release();
+        try
+        {
+            if (_changeSignal.CurrentCount == 0)
+                _changeSignal.Release();
+        }
+        catch (SemaphoreFullException)
+        {
+        }
         try
         {
             _activeIdle?.Cancel();
