@@ -5,15 +5,44 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Zuemail.MailKit.Services;
 
 namespace Zuemail.MailKit.Models
 {
     public class MailOptions : EmailOptions
     {
+        private object _protocolLoggerLock = new object();
+        private IProtocolLogger _protocolLogger;
+        private bool _protocolLoggerCreated;
+
         public virtual ProtocolLoggerOptions ProtocolLog { get; set; } = new ProtocolLoggerOptions();
 
         public virtual Lazy<IProtocolLogger> ProtocolLogger() =>
-            new Lazy<IProtocolLogger>(() => ProtocolLog.CreateProtocolLogger());
+            new Lazy<IProtocolLogger>(GetOrCreateProtocolLogger);
+
+        private IProtocolLogger GetOrCreateProtocolLogger()
+        {
+            lock (_protocolLoggerLock)
+            {
+                if (_protocolLoggerCreated)
+                    return _protocolLogger;
+                _protocolLoggerCreated = true;
+                if (!string.IsNullOrWhiteSpace(ProtocolLog?.FilePath))
+                    _protocolLogger = new MailKitProtocolLogger(ProtocolLog);
+                return _protocolLogger;
+            }
+        }
+
+        /// <summary>Disposes a protocol logger created by these options, if any.</summary>
+        public void DisposeProtocolLogger()
+        {
+            lock (_protocolLoggerLock)
+            {
+                (_protocolLogger as IDisposable)?.Dispose();
+                _protocolLogger = null;
+                _protocolLoggerCreated = true;
+            }
+        }
 
         public virtual NetworkCredential Credential
         {
@@ -90,6 +119,9 @@ namespace Zuemail.MailKit.Models
             copy.ProtocolLog = ProtocolLog?.Copy() ?? new ProtocolLoggerOptions();
             copy.AuthenticationMechanismsToRemove = new List<string>(AuthenticationMechanismsToRemove ?? new List<string>());
             copy.Credential = new NetworkCredential(Username ?? string.Empty, Password ?? string.Empty);
+            copy._protocolLogger = null;
+            copy._protocolLoggerCreated = false;
+            copy._protocolLoggerLock = new object();
             return copy;
         }
     }

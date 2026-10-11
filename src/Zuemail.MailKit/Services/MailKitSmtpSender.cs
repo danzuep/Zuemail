@@ -30,7 +30,10 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
     {
         this._validation = validation ?? new MimeMessageValidator();
         _logger = logger ?? NullLogger<MailKitSmtpSender>.Instance;
-        _senderOptions = senderOptions.Value;
+        if (senderOptions == null)
+            throw new ArgumentNullException(nameof(senderOptions));
+        _senderOptions = senderOptions.Value?.Copy() as SmtpOptions
+            ?? throw new ArgumentException("SMTP options are required.", nameof(senderOptions));
         if (string.IsNullOrWhiteSpace(_senderOptions.Host))
             throw new ArgumentException($"{nameof(SmtpOptions.Host)} is not set.");
         _ownsClient = smtpClient == null;
@@ -146,6 +149,7 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
             await _smtpClient.DisconnectAsync(true).ConfigureAwait(false);
         if (_ownsClient)
             _smtpClient.Dispose();
+        _senderOptions.DisposeProtocolLogger();
     }
 
     public void Dispose()
@@ -155,5 +159,6 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
             _smtpClient.Disconnect(true);
         if (_ownsClient)
             _smtpClient.Dispose();
+        _senderOptions.DisposeProtocolLogger();
     }
 }

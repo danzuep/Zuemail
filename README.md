@@ -10,7 +10,7 @@ Zuemail is a small .NET email library built around a fluent, reusable message bu
 - `src/Zuemail.Core.Tests` contains transport-independent Core tests.
 - `src/Zuemail.MailKit.Tests` tests SMTP/IMAP integration and provider configuration. Both test projects use Microsoft.Testing.Platform.
 
-The Core and MailKit libraries target `netstandard2.0` and `net10.0`; the console and tests target `net10.0`. SMTP and IMAP settings bind separately under `Email:Smtp` and `Email:Imap`. See [the architecture diagrams](docs/architecture.md) and [the implementation plan](docs/fluent-email-plan.md).
+The Core and MailKit libraries target `netstandard2.0` and `net10.0`; the console and tests target `net10.0`. SMTP and IMAP settings bind separately under `Email:Smtp` and `Email:Imap`. See [usage examples](docs/usage.md), [the feature inventory](docs/features.md), [the architecture diagrams](docs/architecture.md), and [the remaining parity plan](docs/fluent-email-plan.md).
 
 ## Fluent Composition
 
@@ -18,15 +18,15 @@ Reusable actions define shared message details; copies allow per-message changes
 
 ```csharp
 Action<IEmailMessageBuilder> welcome = email => email
-	.From("sender@example.com")
-	.Header("X-Campaign", "welcome")
-	.Body("Welcome", "<p>Welcome</p>");
+    .From("sender@example.com")
+    .Header("X-Campaign", "welcome")
+    .Body("Welcome", "<p>Welcome</p>");
 
 var template = new EmailMessageBuilder().Compose(welcome).SaveAsTemplate();
 var message = template.Copy()
-	.To("recipient@example.com")
-	.Subject("Hello")
-	.Build();
+    .To("recipient@example.com")
+    .Subject("Hello")
+    .Build();
 
 // Send the built message with a configured IEmailSender<IEmailMessage>.
 ```
