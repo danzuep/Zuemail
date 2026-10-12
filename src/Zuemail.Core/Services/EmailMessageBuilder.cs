@@ -39,14 +39,6 @@ namespace Zuemail.Core.Services
         }
 
         /// <inheritdoc/>
-        public virtual IEmailMessageBuilder Body(string plainText, string html = null)
-        {
-            Email.BodyText = plainText ?? string.Empty;
-            Email.BodyHtml = html ?? string.Empty;
-            return this;
-        }
-
-        /// <inheritdoc/>
         public virtual IEmailMessage Build() => Email.Copy();
 
         public virtual IEmailMessageBuilder Header(string key, string value)

@@ -27,7 +27,7 @@ public class MailFolderClientTests
         client.SetupGet(value => value.SharedNamespaces).Returns(new FolderNamespaceCollection());
         client.SetupGet(value => value.OtherNamespaces).Returns(new FolderNamespaceCollection());
         client.Setup(value => value.GetFolder(It.IsAny<FolderNamespace>())).Returns(root.Object);
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.SetupGet(value => value.ImapClient).Returns(client.Object);
         using var folderClient = new MailFolderClient(receiver.Object);
 
@@ -49,7 +49,7 @@ public class MailFolderClientTests
             .Returns(Task.CompletedTask);
         folder.Setup(value => value.StoreAsync(It.IsAny<IList<UniqueId>>(), It.IsAny<IStoreFlagsRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<UniqueId>());
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder.Object);
         using var folderClient = new MailFolderClient(receiver.Object);
 
@@ -67,7 +67,7 @@ public class MailFolderClientTests
         var folder = new Mock<IMailFolder>();
         folder.SetupGet(value => value.IsOpen).Returns(true);
         folder.SetupGet(value => value.Access).Returns(FolderAccess.ReadOnly);
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder.Object);
         using var folderClient = new MailFolderClient(receiver.Object);
 
@@ -92,7 +92,7 @@ public class MailFolderClientTests
             .ReturnsAsync(new List<UniqueId>());
         folder.Setup(value => value.ExpungeAsync(It.Is<IList<UniqueId>>(uids => uids.SequenceEqual(new[] { new UniqueId(42u) })),
             It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder.Object);
         using var folderClient = new MailFolderClient(receiver.Object);
 

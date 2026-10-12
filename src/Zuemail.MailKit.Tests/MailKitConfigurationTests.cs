@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Zuemail.MailKit.Abstractions;
 using Zuemail.MailKit.Extensions;
 using Zuemail.MailKit.Models;
+using Zuemail.MailKit.Services;
 using Xunit;
 
 namespace Zuemail.MailKit.Tests;
@@ -15,29 +16,38 @@ public class MailKitConfigurationTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Email:Smtp:Host"] = "smtp.example.com",
-            ["Email:Smtp:Port"] = "587",
+            ["Email:Smtp:Host"] = "localhost:25",
             ["Email:Smtp:Username"] = "smtp-user",
-            ["Email:Imap:Host"] = "imap.example.com",
-            ["Email:Imap:Port"] = "993",
+            ["Email:Imap:Host"] = "imap.example.com:993",
             ["Email:Imap:Username"] = "imap-user",
             ["Email:Imap:MailFolderName"] = "INBOX"
         }).Build();
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddZuemailSmtpSender(configuration);
-        services.AddZuemailImapReceiver(configuration);
+        services.AddZuemailEmailSender(configuration);
+        services.AddZuemailEmailReceiver(configuration);
         using var provider = services.BuildServiceProvider();
 
-        var smtp = provider.GetRequiredService<IOptions<SmtpOptions>>().Value;
-        var imap = provider.GetRequiredService<IOptions<ImapOptions>>().Value;
-        using var receiver = provider.GetRequiredService<IImapReceiver>();
+        var sender = provider.GetRequiredService<Zuemail.Core.Abstractions.IEmailSender<Zuemail.Core.Abstractions.IEmailMessage>>();
+        using var receiver = provider.GetRequiredService<IEmailReceiver>();
 
-        Assert.Equal("smtp.example.com", smtp.Host);
-        Assert.Equal((ushort)587, smtp.Port);
-        Assert.Equal("imap.example.com", imap.Host);
-        Assert.Equal((ushort)993, imap.Port);
-        Assert.Equal("INBOX", imap.MailFolderName);
+        Assert.Equal("localhost:25 smtp-user", sender.ToString());
+        Assert.EndsWith("INBOX", receiver.ToString());
         Assert.Contains("imap.example.com", receiver.ToString());
+        Assert.Contains(":993", receiver.ToString());
+    }
+
+    [Fact]
+    public void RenamedTypes_KeepLegacyAliasesUsable()
+    {
+#pragma warning disable CS0618
+        using var legacySender = MailKitSmtpSender.Create("localhost:25");
+        using var legacyReceiver = ImapReceiver.Create("localhost:143");
+        using IImapReceiver legacyClone = ((IImapReceiver)legacyReceiver).Clone();
+#pragma warning restore CS0618
+
+        Assert.IsAssignableFrom<EmailSender>(legacySender);
+        Assert.IsAssignableFrom<EmailReceiver>(legacyReceiver);
+        Assert.Contains("localhost:143", legacyClone.ToString());
     }
 }

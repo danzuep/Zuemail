@@ -15,8 +15,8 @@ namespace Zuemail.MailKit.Services;
 /// <summary>Monitors one folder using IMAP IDLE when available and NOOP polling otherwise.</summary>
 public sealed class MailFolderMonitor : IMailFolderMonitor
 {
-    private readonly IImapReceiver _idleReceiver;
-    private readonly IImapReceiver _fetchReceiver;
+    private readonly IEmailReceiver _idleReceiver;
+    private readonly IEmailReceiver _fetchReceiver;
     private readonly ILogger<MailFolderMonitor> _logger;
     private readonly SemaphoreSlim _changeSignal = new(0, 1);
     private CancellationTokenSource _activeIdle;
@@ -30,7 +30,7 @@ public sealed class MailFolderMonitor : IMailFolderMonitor
     private TimeSpan _retryDelay = TimeSpan.FromSeconds(2);
     private MessageSummaryItems _items = MessageSummaryItems.Envelope | MessageSummaryItems.Flags;
 
-    public MailFolderMonitor(IImapReceiver receiver, ILogger<MailFolderMonitor> logger = null)
+    public MailFolderMonitor(IEmailReceiver receiver, ILogger<MailFolderMonitor> logger = null)
     {
         if (receiver == null)
             throw new ArgumentNullException(nameof(receiver));

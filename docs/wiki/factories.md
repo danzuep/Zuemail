@@ -10,12 +10,12 @@ var smtpClient = smtpOptions.CreateSmtpClient();
 var imapClient = imapOptions.CreateImapClient();
 ```
 
-Normally let `MailKitSmtpSender` or `ImapReceiver` create and own the client. Constructors accept an injected client for testing or caller-managed ownership; in that case the provider does not dispose the injected client.
+Normally let `EmailSender` or `EmailReceiver` create and own the client. Constructors accept an injected client for testing or caller-managed ownership; in that case the provider does not dispose the injected client. `MailKitSmtpSender`, `ImapReceiver`, `IImapReceiver`, `AddZuemailSmtpSender()`, and `AddZuemailImapReceiver()` remain obsolete compatibility aliases.
 
-`ImapReceiver.Clone()` creates another receiver with copied settings and an independent client:
+`EmailReceiver.Clone()` creates another receiver with copied settings and an independent client:
 
 ```csharp
-using var otherReceiver = (ImapReceiver)receiver.Clone();
+using var otherReceiver = receiver.Clone();
 ```
 
-Dependency injection currently registers one configured IMAP account per receiver. A multi-account `IImapReceiverFactory` and monitor factory are not implemented; construct/register separate options and receivers explicitly when an application needs multiple accounts. Do not share a client across folders being monitored concurrently.
+Dependency injection currently registers one configured IMAP account per receiver. A multi-account `IEmailReceiverFactory` and monitor factory are not implemented; construct/register separate options and receivers explicitly when an application needs multiple accounts. Do not share a client across folders being monitored concurrently.

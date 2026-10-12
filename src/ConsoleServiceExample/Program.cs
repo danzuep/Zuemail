@@ -17,8 +17,8 @@ var logger = loggerFactory.CreateLogger<Program>();
 var configuration = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json").Build();
 
 var emailSenderOptions = configuration.GetRequiredSection(SmtpOptions.SectionName).Get<SmtpOptions>()!;
-using var smtpSender = new MailKitSmtpSender(Options.Create(emailSenderOptions), new MimeMessageValidator(),
-    loggerFactory.CreateLogger<MailKitSmtpSender>());
+using var smtpSender = new EmailSender(Options.Create(emailSenderOptions), new MimeMessageValidator(),
+    loggerFactory.CreateLogger<EmailSender>());
 await smtpSender.SmtpClient.GetConnectedAuthenticatedAsync<SmtpClient>(emailSenderOptions);
 var writtenEmail = new EmailMessageBuilder()
     .Compose(email => email
@@ -37,7 +37,7 @@ isSent = await smtpSender.TrySendAsync(secondEmail);
 logger.LogInformation("Email 2 {result}.", isSent ? "sent" : "failed to send");
 
 var emailReceiverOptions = configuration.GetRequiredSection(ImapOptions.SectionName).Get<ImapOptions>()!;
-using var imapReceiver = new ImapReceiver(Options.Create(emailReceiverOptions), loggerFactory.CreateLogger<ImapReceiver>());
+using var imapReceiver = new EmailReceiver(Options.Create(emailReceiverOptions), loggerFactory.CreateLogger<EmailReceiver>());
 await imapReceiver.ConnectAuthenticatedImapClientAsync();
 var mailFolderClient = imapReceiver.MailFolderClient;
 var inbox = await mailFolderClient.ConnectAsync();

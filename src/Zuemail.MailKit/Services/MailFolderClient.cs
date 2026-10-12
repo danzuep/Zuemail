@@ -22,11 +22,11 @@ public sealed class MailFolderClient : IMailFolderClient
         new[] { "Trash", "Deleted Items", "[Gmail]/Trash" }
     };
 
-    private readonly IImapReceiver _receiver;
+    private readonly IEmailReceiver _receiver;
     private IMailFolder _folder;
     private bool _disposed;
 
-    public MailFolderClient(IImapReceiver receiver) =>
+    public MailFolderClient(IEmailReceiver receiver) =>
         _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
 
     public string MailFolderName => _folder?.FullName ?? _receiver.ToString();

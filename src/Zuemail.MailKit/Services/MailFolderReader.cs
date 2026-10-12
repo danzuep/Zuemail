@@ -15,7 +15,7 @@ namespace Zuemail.MailKit.Services;
 /// <summary>Reads summaries and MIME messages using index, UID-range, or search selection.</summary>
 public sealed class MailFolderReader : IMailFolderReader
 {
-    private readonly IImapReceiver _receiver;
+    private readonly IEmailReceiver _receiver;
     private readonly ILogger<MailFolderReader> _logger;
     private readonly bool _ownsReceiver;
     private int _skip;
@@ -29,7 +29,7 @@ public sealed class MailFolderReader : IMailFolderReader
     private ulong _rangeBatchSize;
     private bool _disposed;
 
-    public MailFolderReader(IImapReceiver receiver, ILogger<MailFolderReader> logger = null, bool ownsReceiver = false)
+    public MailFolderReader(IEmailReceiver receiver, ILogger<MailFolderReader> logger = null, bool ownsReceiver = false)
     {
         _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
         _logger = logger ?? NullLogger<MailFolderReader>.Instance;

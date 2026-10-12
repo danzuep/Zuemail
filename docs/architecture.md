@@ -49,14 +49,14 @@ sequenceDiagram
 
 ## Connect and Monitor IMAP
 
-The console uses `IImapReceiver` to connect/authenticate and provides a fluent reader, folder client, and event-based monitor. The reader fetches INBOX summaries/messages with read-only folder access. The monitor uses IDLE only when the server advertises that capability, renews the IDLE wait, falls back to NOOP polling when IDLE is unavailable, dispatches arrivals/flag changes/departures, and supports cancellation/reconnect retries.
+The console uses `IEmailReceiver` to connect/authenticate and provides a fluent reader, folder client, and event-based monitor. The reader fetches INBOX summaries/messages with read-only folder access. The monitor uses IDLE only when the server advertises that capability, renews the IDLE wait, falls back to NOOP polling when IDLE is unavailable, dispatches arrivals/flag changes/departures, and supports cancellation/reconnect retries.
 
 ```mermaid
 sequenceDiagram
     actor App as Console application
     participant Config as IConfiguration
     participant Options as ImapOptions
-    participant Receiver as IImapReceiver
+    participant Receiver as IEmailReceiver
     participant Client as MailKit ImapClient
     participant Inbox as INBOX (read-only)
 
@@ -90,16 +90,17 @@ sequenceDiagram
 
 ## Design Patterns in Use
 
-- **Builder:** `EmailMessageBuilder` gathers message fields through fluent methods. `Compose(Action<IEmailMessageBuilder>)` applies reusable defaults, and `Build()` returns a detached message without sending.
+- **Builder:** `EmailMessageBuilder` gathers message fields through fluent methods. `Compose(Action<IEmailMessageBuilder>)` applies reusable defaults; `BodyText()` and `BodyHtml()` define the MIME alternatives separately. `Build()` returns a detached message without sending.
 - **Prototype-style copying and templates:** `EmailMessage.Copy()` and builder `Copy()` create independent working state. `SaveAsTemplate()` preserves reusable defaults; the handler starts/reset messages from copies. Collections, contacts, and byte arrays are copied, while legacy streams and other objects remain borrowed references.
 - **Strategy:** `IValidationStrategy<IEmailMessage>` allows validation to be supplied independently of the handler. `EmailMessageValidator` is the default; `ICancellableValidationStrategy<T>` adds cancellation without breaking legacy strategies.
-- **Adapter:** `EmailMessageConverter` maps Core messages to/from MimeKit types. `MailKitSmtpSender` adapts `IEmailSender<IEmailMessage>` to SMTP. `ImapReceiver` adapts configured account operations to MailKit client/folder calls.
-- **Facade and modular services:** `IImapReceiver` coordinates connection/authentication and exposes separate `IMailReader`, `IMailFolderClient`, and `IMailFolderMonitor` services. The receiver owns client lifecycle; readers, folder operations, and monitoring remain independently testable.
+- **Adapter:** `EmailMessageConverter` maps Core messages to/from MimeKit types. `EmailSender` adapts `IEmailSender<IEmailMessage>` to SMTP. `EmailReceiver` adapts configured account operations to MailKit client/folder calls.
+- **Facade and modular services:** `IEmailReceiver` coordinates connection/authentication and exposes separate `IMailReader`, `IMailFolderClient`, and `IMailFolderMonitor` services. The receiver owns client lifecycle; readers, folder operations, and monitoring remain independently testable.
 - **Fluent query object:** `MailFolderReader` composes `Top`, `Skip`, `Take`, `Range`, `Query`, and `Items`, then executes retrieval explicitly. It owns selection state, not the receiver's client.
 - **Observer:** `MailFolderMonitor` subscribes to MailKit folder events and dispatches arrival, flag-change, and departure callbacks. It uses IDLE with a polling fallback and handles cancellation/reconnection.
 - **Options/configuration:** `EmailOptions`, `SmtpOptions`, and `ImapOptions` separate neutral connection values from MailKit-specific TLS, capabilities, and protocol behavior. The composition root binds `Email:Smtp` and `Email:Imap` separately; DI extensions configure and register provider services.
 - **Dependency injection / composition root:** the console chooses options, validators, loggers, and provider clients. Core contracts do not depend on the MailKit project; the provider references Core.
-- **Resource ownership:** `IImapReceiver` owns a client it creates but does not dispose an injected client. Reader copies and monitors use cloned receivers; callbacks run outside Core. SMTP follows the same owned-versus-injected-client rule. This is deterministic resource management, not connection pooling.
+- **Resource ownership:** `IEmailReceiver` owns a client it creates but does not dispose an injected client. Reader copies and monitors use cloned receivers; callbacks run outside Core. SMTP follows the same owned-versus-injected-client rule. This is deterministic resource management, not connection pooling.
+- **Interlocked logger coordination:** logger creation/disposal and queue producer state use `Interlocked`/volatile operations; `ConcurrentQueue` and `SemaphoreSlim.WaitAsync()` keep file writes off MailKit's synchronous logging callbacks. Formatting state assumes one logger per non-concurrent MailKit client. Synchronous `Dispose()` necessarily waits for the writer; async owners use `DisposeAsync()` to drain without blocking.
 - **Symmetric provider lifecycle:** SMTP and IMAP options expose fresh client factories, use the shared MailKit connect/auth helper where applicable, bind from separate nested sections, and offer matching DI registration. Each protocol has a small owner service rather than sharing mutable connected-client state.
 
 SMTP and IMAP now share provider options, client factories, connection/authentication helpers, typed capability delegates, DI registration, cancellation, and explicit client ownership. They retain protocol-specific services instead of forcing SMTP/IMAP into one large abstraction. Retry behavior currently belongs to IMAP monitoring; generic SMTP retries, decorators, channel-backed queues, and durable outbox processing remain optional future work.
@@ -122,7 +123,9 @@ SMTP and IMAP now share provider options, client factories, connection/authentic
 }
 ```
 
-`SmtpOptions.SectionName` and `ImapOptions.SectionName` point to these nested sections. `ConfigureSmtp()`/`ConfigureImap()` and `AddZuemailSmtpSender()`/`AddZuemailImapReceiver()` provide the equivalent DI setup.
+`SmtpOptions.SectionName` and `ImapOptions.SectionName` point to these nested sections. `ConfigureSmtp()`/`ConfigureImap()` and `AddZuemailEmailSender()`/`AddZuemailEmailReceiver()` provide the equivalent DI setup.
+
+The old `MailKitSmtpSender`, `ImapReceiver`, and `IImapReceiver` names remain as obsolete compatibility aliases. New code should use `EmailSender`, `EmailReceiver`, and `IEmailReceiver`.
 
 ## Test Boundaries
 

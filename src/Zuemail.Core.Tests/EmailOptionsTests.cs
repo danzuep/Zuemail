@@ -23,6 +23,7 @@ public class EmailOptionsTests
 
     [Theory]
     [InlineData("smtp.example.com:587", "smtp.example.com", (ushort)587)]
+    [InlineData("localhost:25", "localhost", (ushort)25)]
     [InlineData("smtp.example.com", "smtp.example.com", (ushort)0)]
     [InlineData("[2001:db8::1]:993", "2001:db8::1", (ushort)993)]
     [InlineData("[2001:db8::1]", "2001:db8::1", (ushort)0)]

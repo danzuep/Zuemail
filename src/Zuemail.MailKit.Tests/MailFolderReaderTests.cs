@@ -32,7 +32,7 @@ public class MailFolderReaderTests
             .Returns(Task.CompletedTask);
         folder.Setup(value => value.FetchAsync(7, 9, It.IsAny<IFetchRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(summaries);
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder.Object);
         using var reader = new MailFolderReader(receiver.Object);
 
@@ -52,7 +52,7 @@ public class MailFolderReaderTests
         folder.SetupGet(value => value.IsOpen).Returns(true);
         folder.Setup(value => value.FetchAsync(It.IsAny<IList<UniqueId>>(), It.IsAny<IFetchRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(summaries);
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder.Object);
         using var reader = new MailFolderReader(receiver.Object);
 
@@ -72,7 +72,7 @@ public class MailFolderReaderTests
         folder.Setup(value => value.SearchAsync(It.IsAny<SearchQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync(matches);
         folder.Setup(value => value.FetchAsync(It.Is<IList<UniqueId>>(uids => uids.SequenceEqual(expected)),
             It.IsAny<IFetchRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(summaries);
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder.Object);
         using var reader = new MailFolderReader(receiver.Object);
 
@@ -84,7 +84,7 @@ public class MailFolderReaderTests
     [Fact]
     public async Task TakeZero_DoesNotConnectToFolder()
     {
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         using var reader = new MailFolderReader(receiver.Object);
 
         var result = await reader.Take(0).GetMessageSummariesAsync(TestContext.Current.CancellationToken);
@@ -104,7 +104,7 @@ public class MailFolderReaderTests
             .Callback<int, int, IFetchRequest, CancellationToken>((start, end, _, _) => fetchedIndexes.Add((start, end)))
             .ReturnsAsync((int start, int end, IFetchRequest _, CancellationToken _) =>
                 Enumerable.Range(start, end - start + 1).Select(index => Summary((uint)(index + 1), index)).ToList());
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder.Object);
         using var reader = new MailFolderReader(receiver.Object);
 
@@ -136,7 +136,7 @@ public class MailFolderReaderTests
         folder.Setup(value => value.GetMessageAsync(new UniqueId(4u), It.IsAny<CancellationToken>(), It.IsAny<ITransferProgress>()))
             .Callback<UniqueId, CancellationToken, ITransferProgress>((_, _, _) => Assert.True(open))
             .ReturnsAsync(message);
-        var receiver = new Mock<IImapReceiver>();
+        var receiver = new Mock<IEmailReceiver>();
         receiver.Setup(value => value.ConnectMailFolderAsync(It.IsAny<CancellationToken>())).ReturnsAsync(folder.Object);
         using var reader = new MailFolderReader(receiver.Object);
 

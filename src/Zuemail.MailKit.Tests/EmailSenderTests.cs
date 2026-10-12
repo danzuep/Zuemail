@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Zuemail.MailKit.Tests;
 
-public class MailKitSmtpSenderTests
+public class EmailSenderTests
 {
     [Fact]
     public async Task SendAsync_CoreMessage_ConnectsAuthenticatesAndSendsWithSameClient()
@@ -32,7 +32,7 @@ public class MailKitSmtpSenderTests
         client.Setup(value => value.SendAsync(It.IsAny<MimeMessage>(), It.IsAny<CancellationToken>(), It.IsAny<ITransferProgress>()))
             .ReturnsAsync("250 accepted");
 
-        using var sender = new MailKitSmtpSender(Options.Create(new SmtpOptions
+        using var sender = new EmailSender(Options.Create(new SmtpOptions
         {
             Host = "smtp.example.com",
             Port = 587,

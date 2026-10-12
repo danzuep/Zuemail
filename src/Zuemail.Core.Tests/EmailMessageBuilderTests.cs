@@ -139,13 +139,13 @@ public class EmailMessageBuilderTests
     }
 
     [Fact]
-    public void Body_NullHtml_ClearsPreviousAlternative()
+    public void BodyTextAndBodyHtml_SetIndependentRepresentations()
     {
         var builder = new EmailMessageBuilder();
-        builder.Body("Original", "<p>Original</p>").Body("Plain only");
+        builder.BodyText("Original").BodyHtml("<p>Original</p>").BodyText("Plain only");
 
         Assert.Equal("Plain only", builder.Email.BodyText);
-        Assert.Equal(string.Empty, builder.Email.BodyHtml);
+        Assert.Equal("<p>Original</p>", builder.Email.BodyHtml);
         Assert.Throws<ArgumentNullException>(() => builder.Compose(null!));
     }
 

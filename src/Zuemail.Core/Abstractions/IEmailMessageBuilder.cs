@@ -12,12 +12,6 @@ namespace Zuemail.Core.Abstractions
         /// <returns>This builder.</returns>
         IEmailMessageBuilder Compose(Action<IEmailMessageBuilder> configure);
 
-        /// <summary>Sets plain text and an optional HTML alternative.</summary>
-        /// <param name="plainText">The plain-text content.</param>
-        /// <param name="html">The HTML content, or null to clear it.</param>
-        /// <returns>This builder.</returns>
-        IEmailMessageBuilder Body(string plainText, string html = null);
-
         /// <summary>Creates an independent message snapshot without I/O.</summary>
         /// <returns>A message independent of future builder changes; legacy streams remain borrowed.</returns>
         IEmailMessage Build();

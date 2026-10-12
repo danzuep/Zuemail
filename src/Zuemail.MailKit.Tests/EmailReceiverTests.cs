@@ -13,16 +13,16 @@ using Xunit;
 
 namespace Zuemail.MailKit.Tests;
 
-public class ImapReceiverTests
+public class EmailReceiverTests
 {
     [Fact]
     public void Constructor_RequiresHostAndCopiesOptions()
     {
         var invalid = new ImapOptions();
-        Assert.Throws<ArgumentException>(() => new ImapReceiver(Options.Create(invalid)));
+        Assert.ThrowsAny<ArgumentException>(() => new EmailReceiver(Options.Create(invalid)));
 
         var options = new ImapOptions { Host = "imap.example.com", Username = "user", Password = "secret" };
-        using var receiver = new ImapReceiver(Options.Create(options));
+        using var receiver = new EmailReceiver(Options.Create(options));
         options.Username = "changed";
         options.AuthenticationMechanismsToRemove.Add("XOAUTH2");
         var copiedOptions = Assert.IsType<ImapOptions>(new ImapOptions
@@ -56,7 +56,7 @@ public class ImapReceiverTests
             .Callback<ICredentials, CancellationToken>((_, _) => authenticated = true)
             .Returns(Task.CompletedTask);
         var options = new ImapOptions { Host = "imap.example.com", Port = 993, Username = "user", Password = "pass" };
-        using var receiver = new ImapReceiver(Options.Create(options), imapClient: client.Object);
+        using var receiver = new EmailReceiver(Options.Create(options), imapClient: client.Object);
         using var cancellation = new CancellationTokenSource();
 
         await receiver.ConnectAuthenticatedImapClientAsync(cancellation.Token);
@@ -86,7 +86,7 @@ public class ImapReceiverTests
                 return Task.CompletedTask;
             }
         };
-        using var receiver = new ImapReceiver(Options.Create(options), imapClient: client.Object);
+        using var receiver = new EmailReceiver(Options.Create(options), imapClient: client.Object);
 
         await receiver.ConnectAuthenticatedImapClientAsync(TestContext.Current.CancellationToken);
 
@@ -101,7 +101,7 @@ public class ImapReceiverTests
         client.SetupGet(value => value.IsConnected).Returns(true);
         client.SetupGet(value => value.IsAuthenticated).Returns(true);
         client.SetupGet(value => value.AuthenticationMechanisms).Returns(new HashSet<string>());
-        using var receiver = new ImapReceiver(Options.Create(new ImapOptions
+        using var receiver = new EmailReceiver(Options.Create(new ImapOptions
         {
             Host = "imap.example.com",
             AuthenticationMechanismsToRemove = null!
@@ -128,7 +128,7 @@ public class ImapReceiverTests
         client.Setup(value => value.AuthenticateAsync(It.IsAny<ICredentials>(), It.IsAny<CancellationToken>()))
             .Callback<ICredentials, CancellationToken>((_, _) => authenticated = true)
             .Returns(Task.CompletedTask);
-        using var receiver = new ImapReceiver(Options.Create(new ImapOptions
+        using var receiver = new EmailReceiver(Options.Create(new ImapOptions
         {
             Host = "imap.example.com", Port = 993, Username = "user", Password = "pass"
         }), imapClient: client.Object);
@@ -164,7 +164,7 @@ public class ImapReceiverTests
                 return Task.CompletedTask;
             }
         };
-        using var receiver = new ImapReceiver(Options.Create(options), imapClient: client.Object);
+        using var receiver = new EmailReceiver(Options.Create(options), imapClient: client.Object);
 
         await receiver.ConnectAuthenticatedImapClientAsync(TestContext.Current.CancellationToken);
 
@@ -185,7 +185,7 @@ public class ImapReceiverTests
             .ReturnsAsync(FolderAccess.ReadOnly);
         var client = ConnectedClient(folder.Object);
         var options = new ImapOptions { Host = "imap.example.com", MailFolderAccess = FolderAccess.ReadOnly };
-        using var receiver = new ImapReceiver(Options.Create(options), imapClient: client.Object);
+        using var receiver = new EmailReceiver(Options.Create(options), imapClient: client.Object);
 
         var result = await receiver.ConnectMailFolderAsync(TestContext.Current.CancellationToken);
 
@@ -200,7 +200,7 @@ public class ImapReceiverTests
         var folder = new Mock<IMailFolder>();
         folder.SetupGet(value => value.FullName).Returns("INBOX");
         var client = ConnectedClient(folder.Object);
-        var receiver = new ImapReceiver(Options.Create(new ImapOptions { Host = "imap.example.com" }), imapClient: client.Object);
+        var receiver = new EmailReceiver(Options.Create(new ImapOptions { Host = "imap.example.com" }), imapClient: client.Object);
 
         var result = await receiver.GetMailFolderNamesAsync(TestContext.Current.CancellationToken);
 
@@ -212,7 +212,7 @@ public class ImapReceiverTests
     {
         var client = new Mock<IImapClient>();
         client.SetupGet(value => value.IsConnected).Returns(false);
-        var receiver = new ImapReceiver(Options.Create(new ImapOptions { Host = "imap.example.com" }), imapClient: client.Object);
+        var receiver = new EmailReceiver(Options.Create(new ImapOptions { Host = "imap.example.com" }), imapClient: client.Object);
 
         await receiver.DisposeAsync();
 
@@ -223,26 +223,26 @@ public class ImapReceiverTests
     [Fact]
     public void Create_ParsesHostnameAndBracketedIpv6()
     {
-        using var hostname = ImapReceiver.Create("imap.example.com:993");
-        using var ipv6 = ImapReceiver.Create("[2001:db8::1]:993");
+        using var hostname = EmailReceiver.Create("imap.example.com:993");
+        using var ipv6 = EmailReceiver.Create("[2001:db8::1]:993");
         Assert.Contains("imap.example.com:993", hostname.ToString());
         Assert.Contains("2001:db8::1:993", ipv6.ToString());
-        Assert.Throws<ArgumentException>(() => ImapReceiver.Create("[2001:db8::1"));
+        Assert.Throws<ArgumentException>(() => EmailReceiver.Create("[2001:db8::1"));
     }
 
     [Fact]
-    public void AddZuemailImapReceiver_ConfiguresOptionsAndCreatesIndependentReceivers()
+    public void AddZuemailEmailReceiver_ConfiguresOptionsAndCreatesIndependentReceivers()
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddZuemailImapReceiver(options =>
+        services.AddZuemailEmailReceiver(options =>
         {
             options.Host = "imap.example.com";
             options.Username = "user";
         });
         using var provider = services.BuildServiceProvider();
-        using var first = provider.GetRequiredService<IImapReceiver>();
-        using var second = provider.GetRequiredService<IImapReceiver>();
+        using var first = provider.GetRequiredService<IEmailReceiver>();
+        using var second = provider.GetRequiredService<IEmailReceiver>();
 
         Assert.NotSame(first, second);
         Assert.NotSame(first.ImapClient, second.ImapClient);
