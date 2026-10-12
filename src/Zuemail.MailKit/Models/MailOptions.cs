@@ -11,9 +11,8 @@ namespace Zuemail.MailKit.Models
 {
     public class MailOptions : EmailOptions
     {
-        private object _protocolLoggerLock = new object();
+        private int _protocolLoggerState;
         private IProtocolLogger _protocolLogger;
-        private bool _protocolLoggerCreated;
 
         public virtual ProtocolLoggerOptions ProtocolLog { get; set; } = new ProtocolLoggerOptions();
 
@@ -22,25 +21,80 @@ namespace Zuemail.MailKit.Models
 
         private IProtocolLogger GetOrCreateProtocolLogger()
         {
-            lock (_protocolLoggerLock)
+            var spinner = new SpinWait();
+            while (true)
             {
-                if (_protocolLoggerCreated)
+                var state = Volatile.Read(ref _protocolLoggerState);
+                if (state == 2)
                     return _protocolLogger;
-                _protocolLoggerCreated = true;
-                if (!string.IsNullOrWhiteSpace(ProtocolLog?.FilePath))
-                    _protocolLogger = new MailKitProtocolLogger(ProtocolLog);
-                return _protocolLogger;
+                if (state == 3)
+                    return null;
+                if (state == 0 && Interlocked.CompareExchange(ref _protocolLoggerState, 1, 0) == 0)
+                {
+                    try
+                    {
+                        _protocolLogger = !string.IsNullOrWhiteSpace(ProtocolLog?.FilePath)
+                            ? new MailKitProtocolLogger(ProtocolLog)
+                            : null;
+                        Volatile.Write(ref _protocolLoggerState, 2);
+                        return _protocolLogger;
+                    }
+                    catch
+                    {
+                        Volatile.Write(ref _protocolLoggerState, 0);
+                        throw;
+                    }
+                }
+                spinner.SpinOnce();
             }
         }
 
         /// <summary>Disposes a protocol logger created by these options, if any.</summary>
         public void DisposeProtocolLogger()
         {
-            lock (_protocolLoggerLock)
+            var spinner = new SpinWait();
+            while (true)
             {
-                (_protocolLogger as IDisposable)?.Dispose();
-                _protocolLogger = null;
-                _protocolLoggerCreated = true;
+                var state = Volatile.Read(ref _protocolLoggerState);
+                if (state == 3)
+                    return;
+                if (state == 1)
+                {
+                    spinner.SpinOnce();
+                    continue;
+                }
+                if (Interlocked.CompareExchange(ref _protocolLoggerState, 3, state) == state)
+                {
+                    (Interlocked.Exchange(ref _protocolLogger, null) as IDisposable)?.Dispose();
+                    return;
+                }
+            }
+        }
+
+        /// <summary>Asynchronously drains and disposes a provider protocol logger.</summary>
+        public async ValueTask DisposeProtocolLoggerAsync()
+        {
+            var spinner = new SpinWait();
+            while (true)
+            {
+                var state = Volatile.Read(ref _protocolLoggerState);
+                if (state == 3)
+                    return;
+                if (state == 1)
+                {
+                    await Task.Yield();
+                    continue;
+                }
+                if (Interlocked.CompareExchange(ref _protocolLoggerState, 3, state) == state)
+                {
+                    var protocolLogger = Interlocked.Exchange(ref _protocolLogger, null);
+                    if (protocolLogger is IAsyncDisposable asyncDisposable)
+                        await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                    else
+                        (protocolLogger as IDisposable)?.Dispose();
+                    return;
+                }
+                spinner.SpinOnce();
             }
         }
 
@@ -120,8 +174,7 @@ namespace Zuemail.MailKit.Models
             copy.AuthenticationMechanismsToRemove = new List<string>(AuthenticationMechanismsToRemove ?? new List<string>());
             copy.Credential = new NetworkCredential(Username ?? string.Empty, Password ?? string.Empty);
             copy._protocolLogger = null;
-            copy._protocolLoggerCreated = false;
-            copy._protocolLoggerLock = new object();
+            copy._protocolLoggerState = 0;
             return copy;
         }
     }

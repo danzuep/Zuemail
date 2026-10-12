@@ -180,7 +180,7 @@ public sealed class ImapReceiver : IImapReceiver
             if (_ownsClient)
                 _client.Dispose();
         }
-        _options.DisposeProtocolLogger();
+        await _options.DisposeProtocolLoggerAsync().ConfigureAwait(false);
         _client = null;
         _connectionLock.Dispose();
     }

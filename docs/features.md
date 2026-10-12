@@ -4,7 +4,7 @@ Verified inventory for the current `main` branch. Unit tests exercise these beha
 
 ## Core Message Composition
 
-- `EmailMessageBuilder` supports reusable `Compose(Action<IEmailMessageBuilder>)`, `Body(text, html)`, existing text/HTML setters, recipients, headers, subject, and legacy attachments.
+- `EmailMessageBuilder` supports reusable `Compose(Action<IEmailMessageBuilder>)`, distinct `BodyText(text)` and `BodyHtml(html)` methods, a `Body(text, html)` convenience, recipients, headers, subject, and legacy attachments.
 - `Build()`, builder `Copy()`, `SaveAsTemplate()`, and `EmailMessage.Copy()` isolate mutable headers, recipient lists/contacts, attachment dictionaries, and byte arrays. Legacy streams and other non-byte attachment objects remain borrowed references.
 - `EmailMessageHandler` is the send boundary. It has default/replaceable validation, respects validation failures, forwards cancellation, resets from an independent template only after success, and retains the message on failure/cancellation.
 - Core validation checks sender and combined To/Cc/Bcc addresses, reply-to contacts, and header delimiters without inventing addresses or mutating the message.
@@ -32,7 +32,8 @@ Verified inventory for the current `main` branch. Unit tests exercise these beha
 
 - `Zuemail.Core` has no MailKit/MimeKit reference. `Zuemail.MailKit` references Core and owns both transport adapters.
 - `Zuemail.Core.Tests` references Core only. `Zuemail.MailKit.Tests` contains SMTP/IMAP provider, options/configuration, and client/folder lifecycle tests. Both use xUnit v3 with Microsoft.Testing.Platform.
-- Last verified: 40 Core tests and 39 MailKit tests passed. `dotnet build src/Zuemail.slnx -p:GeneratePackageOnBuild=false` passed for both library TFMs, tests, and console.
+- Last verified: 40 Core tests and 40 MailKit tests passed. `dotnet build src/Zuemail.slnx -p:GeneratePackageOnBuild=false` passed for both library TFMs, tests, and console.
+- Concise guides for setup, DI, factories, SMTP, IMAP, and folders are in [docs/wiki](wiki/home.md).
 
 ## Current Limits
 

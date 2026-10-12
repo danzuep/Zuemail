@@ -13,22 +13,23 @@ using Zuemail.Core.Models;
 namespace Zuemail.MailKit.Services;
 
 /// <summary>Formats and asynchronously writes MailKit protocol traffic while redacting authentication secrets.</summary>
-public sealed class MailKitProtocolLogger : IProtocolLogger, IDisposable
+/// <remarks>One logger is used by one MailKit client; MailKit clients themselves are not concurrent-safe.</remarks>
+public sealed class MailKitProtocolLogger : IProtocolLogger, IDisposable, IAsyncDisposable
 {
     private readonly ProtocolLoggerOptions _options;
     private readonly ILogger _logger;
     private readonly IProtocolLogger _secretDetector = new ProtocolLogger(Stream.Null);
     private readonly ConcurrentQueue<string> _pending = new();
     private readonly SemaphoreSlim _available = new(0);
-    private readonly object _formatLock = new();
-    private readonly object _stateLock = new();
     private readonly TextWriter _writer;
     private readonly bool _ownsWriter;
     private readonly Task _writerTask;
+    private int _activeWriters;
     private bool _clientMidline;
     private bool _serverMidline;
-    private bool _completed;
-    private bool _disposed;
+    private int _completed;
+    private int _disposeStarted;
+    private int _disposed;
 
     /// <summary>Creates a logger using the configured file path, stderr, or the supplied text writer.</summary>
     public MailKitProtocolLogger(ProtocolLoggerOptions options, ILogger<MailKitProtocolLogger> logger = null,
@@ -78,12 +79,9 @@ public sealed class MailKitProtocolLogger : IProtocolLogger, IDisposable
     {
         if (uri == null)
             throw new ArgumentNullException(nameof(uri));
-        lock (_formatLock)
-        {
-            _clientMidline = false;
-            _serverMidline = false;
-            Enqueue(AddTimestamp(new StringBuilder()).Append("Connected to ").Append(uri).ToString());
-        }
+        _clientMidline = false;
+        _serverMidline = false;
+        Enqueue(AddTimestamp(new StringBuilder()).Append("Connected to ").Append(uri).ToString());
     }
 
     /// <summary>Logs bytes sent by the client after masking detected credentials.</summary>
@@ -103,32 +101,29 @@ public sealed class MailKitProtocolLogger : IProtocolLogger, IDisposable
         if (count == 0)
             return;
 
-        lock (_formatLock)
+        var end = offset + count;
+        var lineStart = offset;
+        for (var index = offset; index < end; index++)
         {
-            var end = offset + count;
-            var lineStart = offset;
-            for (var index = offset; index < end; index++)
-            {
-                if (buffer[index] != (byte)'\n')
-                    continue;
-                var hasPrefix = isClient ? _clientMidline : _serverMidline;
-                FormatSegment(buffer, lineStart, index, isClient, hasPrefix, isFinal: true);
-                if (isClient)
-                    _clientMidline = false;
-                else
-                    _serverMidline = false;
-                lineStart = index + 1;
-            }
+            if (buffer[index] != (byte)'\n')
+                continue;
+            var hasPrefix = isClient ? _clientMidline : _serverMidline;
+            FormatSegment(buffer, lineStart, index, isClient, hasPrefix, isFinal: true);
+            if (isClient)
+                _clientMidline = false;
+            else
+                _serverMidline = false;
+            lineStart = index + 1;
+        }
 
-            if (lineStart < end)
-            {
-                var hasPrefix = isClient ? _clientMidline : _serverMidline;
-                FormatSegment(buffer, lineStart, end, isClient, hasPrefix, isFinal: false);
-                if (isClient)
-                    _clientMidline = true;
-                else
-                    _serverMidline = true;
-            }
+        if (lineStart < end)
+        {
+            var hasPrefix = isClient ? _clientMidline : _serverMidline;
+            FormatSegment(buffer, lineStart, end, isClient, hasPrefix, isFinal: false);
+            if (isClient)
+                _clientMidline = true;
+            else
+                _serverMidline = true;
         }
     }
 
@@ -184,12 +179,18 @@ public sealed class MailKitProtocolLogger : IProtocolLogger, IDisposable
 
     private void Enqueue(string line)
     {
-        lock (_stateLock)
+        Interlocked.Increment(ref _activeWriters);
+        try
         {
-            if (_completed)
+            if (Volatile.Read(ref _completed) != 0)
                 return;
             _pending.Enqueue(line);
             _available.Release();
+        }
+        finally
+        {
+            if (Interlocked.Decrement(ref _activeWriters) == 0 && Volatile.Read(ref _completed) != 0)
+                _available.Release();
         }
     }
 
@@ -214,35 +215,51 @@ public sealed class MailKitProtocolLogger : IProtocolLogger, IDisposable
                     _logger.LogError(exception, "Failed to write a MailKit protocol log line.");
                 }
             }
-            lock (_stateLock)
-            {
-                if (_completed && _pending.IsEmpty)
-                    return;
-            }
+            if (Volatile.Read(ref _completed) != 0 && Volatile.Read(ref _activeWriters) == 0 && _pending.IsEmpty)
+                return;
         }
     }
 
     /// <summary>Stops accepting records, drains queued output, and releases owned writers.</summary>
     public void Dispose()
     {
-        lock (_stateLock)
+        if (Interlocked.Exchange(ref _disposeStarted, 1) != 0)
         {
-            if (_completed)
-                return;
-            _completed = true;
-            _available.Release();
+            _writerTask.GetAwaiter().GetResult();
+            return;
         }
+        Interlocked.Exchange(ref _completed, 1);
+        _available.Release();
         _writerTask.GetAwaiter().GetResult();
-        if (_ownsWriter)
-            _writer.Dispose();
-        _secretDetector.Dispose();
-        _available.Dispose();
-        _disposed = true;
+        DisposeResources();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposeStarted, 1) != 0)
+        {
+            await _writerTask.ConfigureAwait(false);
+            DisposeResources();
+            return;
+        }
+        Interlocked.Exchange(ref _completed, 1);
+        _available.Release();
+        await _writerTask.ConfigureAwait(false);
+        DisposeResources();
         GC.SuppressFinalize(this);
     }
 
+    private void DisposeResources()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+        if (_ownsWriter)
+            _writer.Dispose();
+        _secretDetector.Dispose();
+    }
+
     /// <summary>Indicates whether disposal has completed.</summary>
-    public bool IsDisposed => _disposed;
+    public bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
     public override string ToString() => _options.ToString();
 }

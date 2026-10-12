@@ -64,14 +64,14 @@ public class MailKitProtocolLoggerTests
     }
 
     [Fact]
-    public void Dispose_DrainsQueuedRecordsBeforeReturning()
+    public async Task DisposeAsync_DrainsQueuedRecordsBeforeReturning()
     {
         var output = new StringWriter();
-        var logger = new MailKitProtocolLogger(new ProtocolLoggerOptions(), output: output);
+        await using var logger = new MailKitProtocolLogger(new ProtocolLoggerOptions(), output: output);
         var bytes = Encoding.UTF8.GetBytes("one\r\ntwo\r\n");
 
         logger.LogServer(bytes, 0, bytes.Length);
-        logger.Dispose();
+        await logger.DisposeAsync();
 
         Assert.Contains("one", output.ToString());
         Assert.Contains("two", output.ToString());
@@ -108,5 +108,22 @@ public class MailKitProtocolLoggerTests
         var options = new ImapOptions { Host = "imap.example.com" };
 
         Assert.Null(options.ProtocolLogger().Value);
+    }
+
+    [Fact]
+    public void MailOptions_ConcurrentLoggerAccess_CreatesOneOwnedLogger()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "zuemail-protocol-race-" + Guid.NewGuid().ToString("N") + ".log");
+        var options = new SmtpOptions { Host = "smtp.example.com" };
+        options.ProtocolLog.FilePath = path;
+        var loggers = new System.Collections.Concurrent.ConcurrentBag<IProtocolLogger>();
+
+        Parallel.For(0, 32, _ => loggers.Add(options.ProtocolLogger().Value));
+
+        var logger = Assert.IsType<MailKitProtocolLogger>(Assert.Single(loggers.Distinct()));
+        logger.Dispose();
+        options.DisposeProtocolLogger();
+        if (File.Exists(path))
+            File.Delete(path);
     }
 }

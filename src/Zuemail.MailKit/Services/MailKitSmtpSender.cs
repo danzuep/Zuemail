@@ -149,7 +149,7 @@ public sealed class MailKitSmtpSender : IEmailSender<IEmailMessage>, IEmailSende
             await _smtpClient.DisconnectAsync(true).ConfigureAwait(false);
         if (_ownsClient)
             _smtpClient.Dispose();
-        _senderOptions.DisposeProtocolLogger();
+        await _senderOptions.DisposeProtocolLoggerAsync().ConfigureAwait(false);
     }
 
     public void Dispose()

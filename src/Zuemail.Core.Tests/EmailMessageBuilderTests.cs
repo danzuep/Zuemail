@@ -70,7 +70,8 @@ public class EmailMessageBuilderTests
         Action<IEmailMessageBuilder> defaults = email => email
             .From("sender@example.com")
             .Header("X-Campaign", "welcome")
-            .Body("Welcome", "<p>Welcome</p>");
+            .BodyText("Welcome")
+            .BodyHtml("<p>Welcome</p>");
         var template = new EmailMessageBuilder().Compose(defaults);
 
         var first = template.Copy().To("first@example.com").Subject("First").Build();

@@ -24,7 +24,8 @@ var writtenEmail = new EmailMessageBuilder()
     .Compose(email => email
         .From("my.name@example.com")
         .Subject("Hello World")
-        .Body("Optional text/plain content.", "Optional text/html content.<br/>"))
+        .BodyText("Optional text/plain content.")
+        .BodyHtml("Optional text/html content.<br/>"))
     .Attach(Path.Combine(AppContext.BaseDirectory, "appsettings.json"))
     .SaveAsTemplate();
 var firstEmail = writtenEmail.Copy().To("YourName@example.com").Build();
