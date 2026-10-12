@@ -1,7 +1,5 @@
 # Zuemail Parity Plan
 
-This is the remaining, trimmed work list for useful feature parity with MailKitSimplified. It builds on Zuemail's Core/MailKit project split and current fluent builder/handler; it does not propose an AST, visitor, gateway project, or new hosting layer.
-
 The implemented surface and known limits are listed in [features.md](features.md). Mark work done there only after focused tests and builds pass.
 
 ## Priority 1: Correctness and Live Verification
@@ -15,7 +13,7 @@ The implemented surface and known limits are listed in [features.md](features.md
 
 ## Priority 2: IMAP Feature Gaps
 
-- [ ] Add a configured multi-account receiver factory (`IImapReceiverFactory`/mailbox options) only for applications that need several accounts. Each account/folder receiver gets copied options and an independent client; test account isolation and disposal.
+- [ ] Add a configured multi-account receiver factory (`IEmailReceiverFactory`/mailbox options) only for applications that need several accounts. Each account/folder receiver gets copied options and an independent client; test account isolation and disposal.
 - [ ] Extend `IMailReader` with the highest-value MailKitSimplified retrieval modes: envelope/body-structure-only messages, cancellable `IAsyncEnumerable<MimeMessage>` or callback batches, and saving selected messages as `.eml`. Keep current `Top`/`Skip`/`Take`/UID/SearchQuery semantics and folder lifetime correct during streaming.
 - [ ] Complete folder copy convenience overloads for a summary/UID and multiple UIDs, by folder object or folder name. Preserve source/destination ownership and cancellation; never expunge unrelated deleted mail.
 - [ ] Add convenience receiver entry points for selecting another folder without mutating shared account options. Each returned reader/monitor must have a clear independent folder/client lifetime.
@@ -32,7 +30,7 @@ The implemented surface and known limits are listed in [features.md](features.md
 
 ## Priority 4: Samples and Release Readiness
 
-- [ ] Update the console sample and README with nested `Email:Smtp`/`Email:Imap` configuration, SMTP and IMAP DI registration, reader filters, monitor callbacks, and attachment ownership.
+- [x] Update the console sample and README with nested `Email:Smtp`/`Email:Imap` configuration; provide concise setup, DI, SMTP, IMAP, and folder usage guides.
 - [ ] Check NuGet package resource paths/readme/license metadata for Core and MailKit independently; build packages with the intended CI command.
 - [ ] Add CI gates for `dotnet test --project src/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj`, `dotnet test --project src/Zuemail.MailKit.Tests/Zuemail.MailKit.Tests.csproj`, and both library TFMs.
 - [ ] Keep MAUI framework/workload upgrades separate from library parity. Upgrade only with an available/required workload and its own build validation.
@@ -49,6 +47,5 @@ The implemented surface and known limits are listed in [features.md](features.md
 
 ## Verification Baseline
 
-- Core: 40 tests pass; MailKit: 39 tests pass, including protocol logger formatting/redaction and disposal tests.
 - `dotnet build src/Zuemail.slnx -p:GeneratePackageOnBuild=false` succeeds for Core/MailKit on `netstandard2.0` and `net10.0`, plus the tests and console.
 - Tests are mocked/unit-level. Live SMTP/IMAP interoperability and protocol-log behavior remain unverified.

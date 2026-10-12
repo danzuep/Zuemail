@@ -150,17 +150,6 @@ public class EmailReceiver : IEmailReceiver
             await AddFolderAndChildrenAsync(child, names, cancellationToken).ConfigureAwait(false);
     }
 
-    [Obsolete("Use MailFolderClient.MoveToAsync instead.")]
-    public async Task<UniqueId?> MoveToSentAsync(IMessageSummary messageSummary, CancellationToken cancellationToken = default)
-    {
-        if (messageSummary == null)
-            throw new ArgumentNullException(nameof(messageSummary));
-        var sentFolder = await MailFolderClient.GetFolderAsync(new[] { "Sent", "Sent Items", "[Gmail]/Sent Mail" }, cancellationToken).ConfigureAwait(false);
-        if (sentFolder == null)
-            throw new InvalidOperationException("The Sent folder could not be found.");
-        return await MailFolderClient.MoveToAsync(messageSummary, sentFolder, cancellationToken).ConfigureAwait(false);
-    }
-
     public IEmailReceiver Clone() => new EmailReceiver(Microsoft.Extensions.Options.Options.Create(_options.Copy() as ImapOptions ?? throw new InvalidOperationException()),
         _logger, protocolLogger: null);
 

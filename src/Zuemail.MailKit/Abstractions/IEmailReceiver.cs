@@ -31,10 +31,6 @@ public interface IEmailReceiver : IAsyncDisposable, IDisposable
     /// <summary>Connects to the configured folder without changing its access unless options request it.</summary>
     ValueTask<IMailFolder> ConnectMailFolderAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Moves a summary to the server's Sent folder.</summary>
-    [Obsolete("Use MailFolderClient.MoveToAsync instead.")]
-    Task<UniqueId?> MoveToSentAsync(IMessageSummary messageSummary, CancellationToken cancellationToken = default);
-
     /// <summary>Disconnects the underlying client.</summary>
     Task DisconnectAsync(CancellationToken cancellationToken = default);
 

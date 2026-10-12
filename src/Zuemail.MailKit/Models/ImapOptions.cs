@@ -72,10 +72,6 @@ namespace Zuemail.MailKit.Models
             return client;
         }
 
-        /// <summary>Creates the legacy lazy client wrapper.</summary>
-        [Obsolete("Prefer CreateImapClient and let the receiver own its client lifetime.")]
-        public Lazy<ImapClient> ImapClient => new Lazy<ImapClient>(() => CreateImapClient());
-
         public async ValueTask ConnectAuthenticateAsync(CancellationToken cancellationToken = default) =>
             await CreateImapClient().GetConnectedAuthenticatedAsync<ImapClient>(this, cancellationToken).ConfigureAwait(false);
 

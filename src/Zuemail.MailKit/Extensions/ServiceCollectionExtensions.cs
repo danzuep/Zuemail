@@ -59,24 +59,6 @@ namespace Zuemail.MailKit.Extensions
         public static IServiceCollection AddZuemailEmailSender(this IServiceCollection services,
             Action<SmtpOptions> configure) => services.ConfigureSmtp(configure).AddZuemailEmailSender();
 
-        /// <summary>Compatibility alias for <see cref="AddZuemailEmailSender(IServiceCollection, IConfiguration, string)"/>.</summary>
-        [Obsolete("Use AddZuemailEmailSender instead.")]
-        public static IServiceCollection AddZuemailSmtpSender(this IServiceCollection services,
-            IConfiguration configuration, string sectionName = SmtpOptions.SectionName) =>
-            services.AddZuemailEmailSender(configuration, sectionName);
-
-        /// <summary>Compatibility alias for <see cref="AddZuemailEmailSender(IServiceCollection, Action{SmtpOptions})"/>.</summary>
-        [Obsolete("Use AddZuemailEmailSender instead.")]
-        public static IServiceCollection AddZuemailSmtpSender(this IServiceCollection services,
-            Action<SmtpOptions> configure) => services.AddZuemailEmailSender(configure);
-
-        /// <summary>Registers the SMTP-backed email sender.</summary>
-        [Obsolete("Use AddZuemailEmailSender instead.")]
-        public static IServiceCollection AddZuemailSmtpSender(this IServiceCollection services)
-        {
-            return services.AddZuemailEmailSender();
-        }
-
         /// <summary>Configures IMAP account options from a configuration section.</summary>
         public static IServiceCollection ConfigureImap(this IServiceCollection services, IConfiguration configuration,
             string sectionName = ImapOptions.SectionName)
@@ -123,24 +105,6 @@ namespace Zuemail.MailKit.Extensions
             Action<ImapOptions> configure)
         {
             return services.ConfigureImap(configure).AddZuemailEmailReceiver();
-        }
-
-        /// <summary>Compatibility alias for <see cref="AddZuemailEmailReceiver(IServiceCollection, IConfiguration, string)"/>.</summary>
-        [Obsolete("Use AddZuemailEmailReceiver instead.")]
-        public static IServiceCollection AddZuemailImapReceiver(this IServiceCollection services,
-            IConfiguration configuration, string sectionName = ImapOptions.SectionName) =>
-            services.AddZuemailEmailReceiver(configuration, sectionName);
-
-        /// <summary>Compatibility alias for <see cref="AddZuemailEmailReceiver(IServiceCollection, Action{ImapOptions})"/>.</summary>
-        [Obsolete("Use AddZuemailEmailReceiver instead.")]
-        public static IServiceCollection AddZuemailImapReceiver(this IServiceCollection services,
-            Action<ImapOptions> configure) => services.AddZuemailEmailReceiver(configure);
-
-        /// <summary>Registers the IMAP-backed email receiver.</summary>
-        [Obsolete("Use AddZuemailEmailReceiver instead.")]
-        public static IServiceCollection AddZuemailImapReceiver(this IServiceCollection services)
-        {
-            return services.AddZuemailEmailReceiver();
         }
 
         /// <summary>

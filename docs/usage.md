@@ -5,7 +5,7 @@ Examples assume `Zuemail.Core`, `Zuemail.MailKit`, and the needed Microsoft.Exte
 ## Compose a Reusable Message
 
 ```csharp
-Action<IEmailMessageBuilder> defaults = email => email.From("sender@example.com").Header("X-Campaign", "welcome").Body("Welcome", "<p>Welcome</p>");
+Action<IEmailMessageBuilder> defaults = email => email.From("sender@example.com").Header("X-Campaign", "welcome").BodyText("Welcome").BodyHtml("<p>Welcome</p>");
 ```
 
 ```csharp
@@ -18,7 +18,7 @@ var message = new EmailMessageBuilder().Compose(defaults).To("recipient@example.
 var sent = await smtpSender.TrySendAsync(message, cancellationToken);
 ```
 
-The sender can be created directly with `IOptions<SmtpOptions>` or registered from the `Email:Smtp` configuration section using `AddZuemailSmtpSender(configuration)`.
+The sender can be created directly with `IOptions<SmtpOptions>` or registered from the `Email:Smtp` configuration section using `AddZuemailEmailSender(configuration)`.
 
 When `ProtocolLog.FilePath` is set in the `Smtp` or `Imap` section, the provider creates an owned async protocol logger, redacts authentication secrets with MailKit's detector, and drains queued output when its sender/receiver is disposed. Use a separate path per concurrently active protocol client.
 
@@ -37,7 +37,7 @@ Dispose returned `MimeMessage` instances after processing them.
 ## Move or Delete Messages
 
 ```csharp
-var movedUid = await receiver.MailFolderClient.MoveToAsync(summary, SpecialFolder.Sent, cancellationToken);
+var movedUid = await receiver.MailFolderClient.MoveToAsync(summary, receiver.MailFolderClient.SentFolder, cancellationToken);
 ```
 
 ```csharp
@@ -52,7 +52,7 @@ Delete marks and expunges only the selected UIDs.
 await receiver.MonitorFolder.SetIgnoreExistingMailOnConnect().SetMessageSummaryItems(MessageSummaryItems.Envelope).OnMessageArrival(summary => ProcessAsync(summary)).IdleAsync(cancellationToken);
 ```
 
-The monitor uses IMAP IDLE when available and polling otherwise. Configure and bind IMAP separately under `Email:Imap` with `AddZuemailImapReceiver(configuration)`.
+The monitor uses IMAP IDLE when available and polling otherwise. Configure and bind IMAP separately under `Email:Imap` with `AddZuemailEmailReceiver(configuration)`.
 
 ## Configuration Shape
 

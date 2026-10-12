@@ -1,12 +1,10 @@
 ﻿using MailKit;
 using MailKit.Net.Imap;
-using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Configuration;
 using Zuemail.Core.Models;
 using Zuemail.Core.Services;
-using Zuemail.Core.Extensions;
 using Zuemail.MailKit.Services;
 using Zuemail.MailKit.Models;
 using Zuemail.MailKit.Extensions;
@@ -19,7 +17,6 @@ var configuration = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirect
 var emailSenderOptions = configuration.GetRequiredSection(SmtpOptions.SectionName).Get<SmtpOptions>()!;
 using var smtpSender = new EmailSender(Options.Create(emailSenderOptions), new MimeMessageValidator(),
     loggerFactory.CreateLogger<EmailSender>());
-await smtpSender.SmtpClient.GetConnectedAuthenticatedAsync<SmtpClient>(emailSenderOptions);
 var writtenEmail = new EmailMessageBuilder()
     .Compose(email => email
         .From("my.name@example.com")

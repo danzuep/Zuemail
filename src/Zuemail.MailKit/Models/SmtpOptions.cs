@@ -37,11 +37,6 @@ namespace Zuemail.MailKit.Models
             return client;
         }
 
-        /// <summary>Creates the legacy lazy client wrapper.</summary>
-        [Obsolete("Prefer CreateSmtpClient and let the sender own its client lifetime.")]
-        public Lazy<SmtpClient> SmtpClient => new Lazy<SmtpClient>(() =>
-            CreateSmtpClient());
-
         public ValueTask ConnectAuthenticateAsync(CancellationToken cancellationToken = default) =>
             ConnectAuthenticateAsync(CreateSmtpClient(), cancellationToken);
 

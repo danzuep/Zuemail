@@ -12,7 +12,7 @@ Verified inventory for the current `main` branch. Unit tests exercise these beha
 
 ## MailKit SMTP
 
-- `EmailSender` sends Core `IEmailMessage` and MimeKit `MimeMessage` inputs through one validate/connect/authenticate/send path. `MailKitSmtpSender` remains as an obsolete compatibility subclass.
+- `EmailSender` sends Core `IEmailMessage` and MimeKit `MimeMessage` inputs through one validate/connect/authenticate/send path.
 - SMTP options support `Email:Smtp` binding, credentials, timeout, TLS mode, capability/authentication configuration, and protocol logging. New sends use an explicit client factory; the sender tracks whether it owns or was given its SMTP client.
 - `MailKitProtocolLogger` formats timestamped/prefixed traffic, masks MailKit-detected authentication secrets, queues output asynchronously, drains on disposal, and supports configured files, stderr, or `ILogger`. Copied SMTP/IMAP options own separate logger instances.
 - MIME mapping uses `BodyBuilder` and supports the existing text/HTML and legacy byte, stream, file-path, and `MimeEntity` attachment forms.
@@ -21,7 +21,7 @@ Verified inventory for the current `main` branch. Unit tests exercise these beha
 
 ## MailKit IMAP
 
-- `IEmailReceiver`/`EmailReceiver` own created clients, preserve injected-client ownership, connect/authenticate with cancellation, support forced reconnect, list namespaces/folders, resolve the configured folder, clone configuration, and disconnect/dispose safely. `IImapReceiver`/`ImapReceiver` remain obsolete compatibility aliases.
+- `IEmailReceiver`/`EmailReceiver` own created clients, preserve injected-client ownership, connect/authenticate with cancellation, support forced reconnect, list namespaces/folders, resolve the configured folder, clone configuration, and disconnect/dispose safely.
 - `IMailFolderReader` fluently selects by `Top`, `Skip`, `Take`, continuous batches, UID ranges, and `SearchQuery`, and fetches message summaries or full `MimeMessage` instances with cancellation/transfer progress.
 - `IMailFolderClient` supports read/write access, folder lookup/creation, common Sent/Drafts/Junk/Trash resolution, flags, deletion with UID-scoped expunge, append to Sent, copy, and move operations.
 - `IMailFolderMonitor` dispatches arrival, flag-change, and departure callbacks; controls treatment of existing messages; uses IMAP IDLE when available and NOOP polling otherwise; and supports cancellation, capped retry delays, and reconnecting its separate monitor/fetch receivers.

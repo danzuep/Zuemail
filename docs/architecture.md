@@ -125,7 +125,7 @@ SMTP and IMAP now share provider options, client factories, connection/authentic
 
 `SmtpOptions.SectionName` and `ImapOptions.SectionName` point to these nested sections. `ConfigureSmtp()`/`ConfigureImap()` and `AddZuemailEmailSender()`/`AddZuemailEmailReceiver()` provide the equivalent DI setup.
 
-The old `MailKitSmtpSender`, `ImapReceiver`, and `IImapReceiver` names remain as obsolete compatibility aliases. New code should use `EmailSender`, `EmailReceiver`, and `IEmailReceiver`.
+The provider exposes `EmailSender`, `EmailReceiver`, and `IEmailReceiver` as its canonical SMTP and IMAP APIs.
 
 ## Test Boundaries
 
